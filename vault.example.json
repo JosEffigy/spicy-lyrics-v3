@@ -1,0 +1,22 @@
+{
+  "v": {
+    "7.0.0-beta.1": {
+      "artifacts": [
+        "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.1/spicy-lyrics@7.0.0-beta.1.zip"
+      ],
+      "providers": [],
+      "checksum": "sha256:0118633c1b4eebc0f36b234da94aa141a791f4d06af5793fe87a60c6dfb02624",
+      "updatedAt": "2026-09-04"
+    }
+  },
+  "metadata": {
+    "name": "spicy-lyrics",
+    "description": "Animated, word-synced lyrics for the Spicetify v3 module runtime.",
+    "authors": [
+      { "name": "Spikerko", "url": "https://github.com/Spikerko" }
+    ],
+    "kind": "extension",
+    "preview": "https://raw.githubusercontent.com/Spikerko/spicy-lyrics/main/previews/V3latest_smallcard_preview.webp",
+    "license": "AGPL-3.0-only"
+  }
+}

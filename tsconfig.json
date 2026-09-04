@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "strict": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "paths": {
+      "/modules/stdlib/mod.ts": ["./stdlib.d.ts"]
+    }
+  },
+  "include": ["index.ts", "src", "project", "*.d.ts"],
+  "exclude": ["node_modules", "dist", "_upstream", "_spicetify-v3", "_spicetify-modules"]
+}
