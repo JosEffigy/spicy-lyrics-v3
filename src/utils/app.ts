@@ -1,5 +1,5 @@
 function isDev() {
-  return __SLdev__m;
+  return typeof __SLdev__m !== "undefined" && __SLdev__m;
 }
 
 const App = {
