@@ -22,7 +22,7 @@ The build is written to `dist/spicy-lyrics@7.0.0-beta.1/`; the packed Store arti
 After publishing `spicy-lyrics@7.0.0-beta.1.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
 
 ```powershell
-spicetify pkg install spicy-lyrics "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.1/spicy-lyrics@7.0.0-beta.1.zip"
+spicetify pkg install spicy-lyrics@7.0.0-beta.1 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.1/spicy-lyrics@7.0.0-beta.1.zip"
 spicetify pkg enable spicy-lyrics@7.0.0-beta.1
 spicetify apply
 ```
@@ -32,7 +32,7 @@ The URL must point directly to the ZIP release asset, not the repository page.
 ## Install a local build
 
 ```powershell
-spicetify pkg install spicy-lyrics ".\spicy-lyrics@7.0.0-beta.1.zip"
+spicetify pkg install spicy-lyrics@7.0.0-beta.1 ".\spicy-lyrics@7.0.0-beta.1.zip"
 spicetify pkg enable spicy-lyrics@7.0.0-beta.1
 spicetify apply
 ```
