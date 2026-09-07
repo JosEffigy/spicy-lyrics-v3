@@ -9,7 +9,10 @@ import Logger from "../Logger.ts";
 
 // Constants
 const RomajiConverter = new Kuroshiro();
-const RomajiPromise = RomajiConverter.init(KuromojiAnalyzer);
+let romajiPromise: Promise<any> | undefined;
+const ensureRomaji = () => romajiPromise ??= RomajiConverter.init(KuromojiAnalyzer)
+  .catch((error: unknown) => { romajiPromise = undefined; throw error; });
+const romajiCache = new Map<string, Promise<string>>();
 
 const romanizationLogger = new Logger("Lyrics Romanization");
 
@@ -98,7 +101,7 @@ const loadPackagesForScripts = async (
   const packages: RomanizationPackages = {};
   for (const script of scripts) {
     if (script === "Japanese") {
-      await RomajiPromise;
+      await ensureRomaji();
     } else if (script === "Chinese") {
       packages.pinyin = await RetrievePackage("pinyin", "4.0.0", "mjs");
     } else if (script === "Korean") {
@@ -114,8 +117,18 @@ const loadPackagesForScripts = async (
 // through unchanged so they can be composed for mixed-script text. ---
 
 const romanizeJapaneseText = async (text: string): Promise<string> => {
-  await RomajiPromise;
-  return await RomajiConverter.convert(text, { to: "romaji", mode: "spaced" });
+  await ensureRomaji();
+  let pending = romajiCache.get(text);
+  if (!pending) {
+    // Medical compound 頸動脈 is often split into separate karaoke segments.
+    const normalized = text.replace(/頸(?=動脈|\s*d[ōo]myaku)/g, "けい")
+      .replace(/^頸$/, "けい");
+    pending = RomajiConverter.convert(normalized, { to: "romaji", mode: "spaced" })
+      .catch((error: unknown) => { romajiCache.delete(text); throw error; });
+    if (romajiCache.size >= 512) romajiCache.delete(romajiCache.keys().next().value!);
+    romajiCache.set(text, pending!);
+  }
+  return await pending!;
 };
 
 const romanizeChineseText = (text: string, pinyin: any): string => {
@@ -237,7 +250,9 @@ const detectPresentScripts = (
 
 // Whether an entry already carries a transliteration (e.g. supplied by the API).
 const hasTransliteration = (entry: any): boolean =>
-  typeof entry.TransliteratedText === "string" && entry.TransliteratedText !== "";
+  typeof entry.TransliteratedText === "string" &&
+  entry.TransliteratedText.trim() !== "" &&
+  !ResidualScriptTest.test(entry.TransliteratedText);
 
 // Romanize a single entry by composing every present-script converter whose
 // characters it contains, in priority order, feeding each step's output forward.
@@ -252,7 +267,10 @@ const romanizeEntry = async (
   // Prefer a transliteration the API already provided — only fill in the gaps.
   if (hasTransliteration(target)) return false;
 
-  let text: string = target.Text;
+  // Preserve provider readings that are already correct; repair only residual
+  // script in a partially converted reading, rather than replacing the whole.
+  let text: string = typeof target.TransliteratedText === "string" &&
+    target.TransliteratedText.trim() ? target.TransliteratedText : target.Text;
   let changed = false;
 
   for (const script of presentScripts) {

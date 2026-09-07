@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
-const version = "7.0.0-beta.4";
+const version = "7.0.0-beta.5";
 const artifact = `spicy-lyrics@${version}.zip`;
 const bytes = await readFile(artifact);
 const zip = await JSZip.loadAsync(bytes);

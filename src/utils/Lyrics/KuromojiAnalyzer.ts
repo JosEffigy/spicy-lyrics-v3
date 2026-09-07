@@ -1,20 +1,21 @@
 // deno-lint-ignore-file no-async-promise-executor no-explicit-any
 import { RetrievePackage } from "../ImportPackage.ts";
 
-RetrievePackage("Kuromoji", "1.0.0", "js")
-  .catch(() => {});
-
 let Analyzer: any;
+let initialization: Promise<void> | undefined;
 export const init = (): Promise<void> => {
   if (Analyzer !== undefined) {
     return Promise.resolve();
   }
 
-  return new Promise(async (resolve, reject) => {
+  return initialization ??= (async () => {
     await RetrievePackage("Kuromoji", "1.0.0", "js");
+    const deadline = Date.now() + 15000;
     while (!(window as any).kuromoji) {
+      if (Date.now() >= deadline) throw new Error("Japanese tokenizer failed to initialize");
       await new Promise((r) => setTimeout(r, 50));
     }
+    await new Promise<void>((resolve, reject) => {
     (window as any).kuromoji.builder({
       dicPath: "https://kuromoji.pkgs.spikerko.org",
     }).build((error: any, analyzer: any) => {
@@ -25,7 +26,8 @@ export const init = (): Promise<void> => {
       Analyzer = analyzer;
       resolve();
     });
-  });
+    });
+  })().catch((error) => { initialization = undefined; throw error; });
 };
 export const parse = (text = ""): Promise<any> => {
   if (text.trim() === "" || Analyzer === undefined) {

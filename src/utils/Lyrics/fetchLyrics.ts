@@ -181,6 +181,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
         const lyricsData = JSON.parse(savedLyricsData);
         // Return the stored lyrics if the URI matches the current track URI
         if (lyricsData?.uri === uri && !isUpdateNotice(lyricsData)) {
+          await ProcessLyrics(lyricsData);
           presentLyrics(lyricsData);
           return [lyricsData, 200];
         }
@@ -195,6 +196,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
   const localLyric = await LocalLyricsManager.get(uri);
   if (localLyric) {
     const lyricsData = { ...localLyric, uri };
+    await ProcessLyrics(lyricsData);
     if (isStaleFetch(uri)) return [lyricsData, 200];
     $currentLyricsData.set(JSON.stringify(lyricsData));
     presentLyrics(lyricsData);
@@ -222,6 +224,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
         // re-fetch checks (which match on uri) recognise it — older cache
         // entries predate the uri field.
         const lyricsFromCache = { ...(lyricsFromCacheRes ?? {}), uri };
+        await ProcessLyrics(lyricsFromCache);
         if (isStaleFetch(uri)) return [{ ...lyricsFromCache, fromCache: true }, 200];
         $currentLyricsData.set(JSON.stringify(lyricsFromCache));
         presentLyrics(lyricsFromCache);
