@@ -15,17 +15,17 @@ pnpm build
 pnpm run pack
 ```
 
-The build is written to `dist/spicy-lyrics@7.0.0-beta.5/`; the packed Store artifact is a versioned ZIP with a printed SHA-256 checksum.
+The build is written to `dist/spicy-lyrics@7.0.0-beta.6/`; the packed Store artifact is a versioned ZIP with a printed SHA-256 checksum.
 
 ## Install online
 
 Fork updates and support are handled through this repository. Upstream update checks are disabled. Lyrics requests use the upstream API compatibility version independently from the fork package version. Cached provider update notices are retried instead of reused as lyrics.
 
-After publishing `spicy-lyrics@7.0.0-beta.5.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
+After publishing `spicy-lyrics@7.0.0-beta.6.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
 
 ```powershell
-spicetify pkg install spicy-lyrics@7.0.0-beta.5 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.5/spicy-lyrics@7.0.0-beta.5.zip"
-spicetify pkg enable spicy-lyrics@7.0.0-beta.5
+spicetify pkg install spicy-lyrics@7.0.0-beta.6 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.6/spicy-lyrics@7.0.0-beta.6.zip"
+spicetify pkg enable spicy-lyrics@7.0.0-beta.6
 spicetify apply
 ```
 
@@ -34,8 +34,8 @@ The URL must point directly to the ZIP release asset, not the repository page.
 ## Install a local build
 
 ```powershell
-spicetify pkg install spicy-lyrics@7.0.0-beta.5 ".\dist\spicy-lyrics@7.0.0-beta.5"
-spicetify pkg enable spicy-lyrics@7.0.0-beta.5
+spicetify pkg install spicy-lyrics@7.0.0-beta.6 ".\dist\spicy-lyrics@7.0.0-beta.6"
+spicetify pkg enable spicy-lyrics@7.0.0-beta.6
 spicetify apply
 ```
 
@@ -46,7 +46,7 @@ The module exposes the v3 `load(ctx)` lifecycle and registers cleanup with `ctx.
 - TypeScript and the v3 module-standard error tier pass.
 - The Store artifact builds and is structurally verified.
 - The inherited feature code still uses classic `Spicetify.*` APIs and several Spotify DOM selectors. V3 currently provides compatibility shims for these, but the framework audit reports them as advisory coupling warnings.
-- `7.0.0-beta.5` has been installed and staged with Spicetify `3.0.0-beta.12`; full lyrics playback still needs broader runtime testing.
+- `7.0.0-beta.6` has been installed and staged with Spicetify `3.0.0-beta.12`; full lyrics playback still needs broader runtime testing.
 
 ## License
 

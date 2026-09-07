@@ -6,6 +6,7 @@ import { RetrievePackage } from "../ImportPackage.ts";
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts";
 import { PageContainer } from "../../components/Pages/PageView.ts";
 import Logger from "../Logger.ts";
+import { contextualReadings, hasJapanese } from "./JapaneseContext.ts";
 
 // Constants
 const RomajiConverter = new Kuroshiro();
@@ -31,7 +32,7 @@ const GreekTextTest = /[Ͱ-Ͽἀ-῿]/;
 // Per-item (1-char) presence tests. Once a script is confirmed present in the
 // whole song, a single matching character in an item is enough to romanize it
 // (mirrors the previous "force conversion for the detected branch" behaviour).
-const ItemJapaneseTest = /[぀-ヿ一-鿿]/; // kana + kanji
+const ItemJapaneseTest = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const ItemChineseTest = /[一-鿿]/;
 const ItemKoreanTest = KoreanTextTest;
 const ItemCyrillicTest = /[Ѐ-ӿԀ-ԯⷠ-ⷿꙀ-ꚟ]/;
@@ -39,7 +40,7 @@ const ItemGreekTest = GreekTextTest;
 
 // Any original (non-Latin) romanizable script — used in dev to flag residue.
 const ResidualScriptTest =
-  /[぀-ヿ一-鿿가-힯ᄀ-ᇿ㄰-㆏Ѐ-ԯͰ-Ͽἀ-῿]/;
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}가-힯ᄀ-ᇿ㄰-㆏Ѐ-ԯͰ-Ͽἀ-῿]/u;
 
 // Load Packages
 RetrievePackage("pinyin", "4.0.0", "mjs")
@@ -120,10 +121,7 @@ const romanizeJapaneseText = async (text: string): Promise<string> => {
   await ensureRomaji();
   let pending = romajiCache.get(text);
   if (!pending) {
-    // Medical compound 頸動脈 is often split into separate karaoke segments.
-    const normalized = text.replace(/頸(?=動脈|\s*d[ōo]myaku)/g, "けい")
-      .replace(/^頸$/, "けい");
-    pending = RomajiConverter.convert(normalized, { to: "romaji", mode: "spaced" })
+    pending = RomajiConverter.convert(text.normalize("NFKC"), { to: "romaji", mode: "spaced" })
       .catch((error: unknown) => { romajiCache.delete(text); throw error; });
     if (romajiCache.size >= 512) romajiCache.delete(romajiCache.keys().next().value!);
     romajiCache.set(text, pending!);
@@ -200,7 +198,7 @@ const gatherText = (
       }
 
       if (vocalGroup.Background !== undefined) {
-        for (const syllable of vocalGroup.Background[0].Syllables) {
+        for (const syllable of vocalGroup.Background.flatMap((v: any) => v.Syllables ?? [])) {
           entries.push({ target: syllable, line: vocalGroup });
           bgTextLines.push(syllable.Text);
         }
@@ -269,7 +267,7 @@ const romanizeEntry = async (
 
   // Preserve provider readings that are already correct; repair only residual
   // script in a partially converted reading, rather than replacing the whole.
-  let text: string = typeof target.TransliteratedText === "string" &&
+  let text: string = presentScripts.includes("Japanese") ? target.Text : typeof target.TransliteratedText === "string" &&
     target.TransliteratedText.trim() ? target.TransliteratedText : target.Text;
   let changed = false;
 
@@ -332,6 +330,30 @@ export const ProcessLyrics = async (lyrics: any) => {
   lyrics.LanguageISO2 = languageISO2;
 
   const presentScripts = detectPresentScripts(scriptText, language, languageISO2);
+  const contextualTargets = new Set<any>();
+
+  if (presentScripts.includes("Japanese") && lyrics.Type === "Syllable") {
+    for (const group of lyrics.Content) {
+      if (group.Type !== "Vocal") continue;
+      for (const vocal of [group.Lead, ...(group.Background ?? [])]) {
+        const syllables = vocal?.Syllables ?? [];
+        if (!syllables.some((s: any) => hasJapanese(s.Text)) ||
+            syllables.every(hasTransliteration)) continue;
+        await ensureRomaji();
+        const readings = await contextualReadings(
+          syllables.map((s: any) => s.Text),
+          KuromojiAnalyzer.parse,
+          romanizeJapaneseText,
+        );
+        for (let i = 0; i < syllables.length; i++) {
+          syllables[i].TransliteratedText = readings[i];
+          contextualTargets.add(syllables[i]);
+        }
+        group.HasTransliterations = true;
+        lyrics.HasTransliterations = true;
+      }
+    }
+  }
 
   // Skip the work (incl. loading packages) when there are no romanizable scripts
   // or every entry already has a transliteration.
@@ -339,13 +361,14 @@ export const ProcessLyrics = async (lyrics: any) => {
   if (presentScripts.length > 0 && entries.some((entry) => !hasTransliteration(entry.target))) {
     const packages = await loadPackagesForScripts(presentScripts);
     const results = await Promise.all(
-      entries.map((entry) => romanizeEntry(entry, presentScripts, packages))
+      entries.filter((entry) => !contextualTargets.has(entry.target))
+        .map((entry) => romanizeEntry(entry, presentScripts, packages))
     );
     appliedRomanization = results.some(Boolean);
   }
 
   // True if the API shipped transliterations or we generated any here.
-  lyrics.HasTransliterations = hadApiTransliterations || appliedRomanization;
+  lyrics.HasTransliterations = lyrics.HasTransliterations === true || hadApiTransliterations || appliedRomanization;
 
   if (lyrics.HasTransliterations === true) {
     PageContainer?.classList.add("Lyrics_RomanizationAvailable");

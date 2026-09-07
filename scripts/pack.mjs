@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
-const version = "7.0.0-beta.5";
+const version = "7.0.0-beta.6";
 const source = path.resolve(`dist/spicy-lyrics@${version}`);
 const output = path.resolve(`spicy-lyrics@${version}.zip`);
 const zip = new JSZip();
