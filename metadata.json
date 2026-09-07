@@ -1,7 +1,7 @@
 {
   "name": "spicy-lyrics",
   "kind": "extension",
-  "version": "7.0.0-beta.6",
+  "version": "7.1.0",
   "authors": ["Spikerko"],
   "description": "Animated, word-synced lyrics ported to the Spicetify v3 module and Store framework.",
   "entries": {
