@@ -1,11 +1,11 @@
 {
   "v": {
-    "7.0.0-beta.2": {
+    "7.0.0-beta.3": {
       "artifacts": [
-        "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.2/spicy-lyrics@7.0.0-beta.2.zip"
+        "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.0.0-beta.3/spicy-lyrics@7.0.0-beta.3.zip"
       ],
       "providers": [],
-      "checksum": "sha256:c7a947354663b6abf86a93b89041f5ddb9e9646337e3d2fba38d40ed885a2a5b",
+      "checksum": "sha256:c217f793980133214f99da9218235dafa8224d10744fd3b53f0ee878a525679b",
       "updatedAt": "2026-09-04"
     }
   },

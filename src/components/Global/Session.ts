@@ -74,15 +74,8 @@ const Session = {
       return Session.SpicyLyrics.ParseVersion($spicyLyricsVersion.get());
     },
     GetLatestVersion: async (): Promise<VersionParsedData> => {
-      const res = await Query([
-        {
-          operation: "ext_version",
-        },
-      ]);
-      const versionJob = res.get("0");
-      if (!versionJob || versionJob.httpStatus !== 200 || versionJob.format !== "text") return undefined;
-      const data = versionJob.data;
-      return Session.SpicyLyrics.ParseVersion(data);
+      // Updates for this fork are available through GitHub releases and Store.
+      return undefined;
     },
     IsOutdated: async (): Promise<boolean> => {
       const latestVersion = await Session.SpicyLyrics.GetLatestVersion();

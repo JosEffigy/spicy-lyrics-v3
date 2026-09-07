@@ -9,7 +9,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({ fromVersion, spicyLyricsVer
   return (
     <div className="update-card-wrapper">
       <h2 className="uc-title">Spicy Lyrics updated!</h2>
-      <p className="uc-subtitle">You're running the latest version.</p>
+      <p className="uc-subtitle">Spicetify v3 fork by JosEffigy.</p>
 
       <div className="uc-divider" />
 
@@ -25,7 +25,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({ fromVersion, spicyLyricsVer
         className="btn-primary"
         onClick={() =>
           window.open(
-            `https://github.com/Spikerko/spicy-lyrics/releases/tag/${spicyLyricsVersion}`,
+            "https://github.com/JosEffigy/spicy-lyrics-v3/releases",
             "_blank"
           )
         }
@@ -34,9 +34,9 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({ fromVersion, spicyLyricsVer
       </button>
       <button
         className="btn-discord"
-        onClick={() => window.open("https://discord.com/invite/uqgXU5wh8j", "_blank")}
+        onClick={() => window.open("https://github.com/JosEffigy/spicy-lyrics-v3/issues", "_blank")}
       >
-        Join the Discord
+        Report an issue
       </button>
     </div>
   );

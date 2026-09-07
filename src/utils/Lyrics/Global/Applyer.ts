@@ -45,7 +45,14 @@ export default async function ApplyLyrics(lyricsContent: FetchLyricsResult): Pro
     return;
   }
 
-  const [descriptor, _status, requestedUri] = lyricsContent;
+  let [descriptor, _status, requestedUri] = lyricsContent;
+  // Handle upstream update instructions, including previously cached payloads.
+  if (typeof descriptor === "object" && descriptor !== null &&
+      (descriptor as any).Type === "Static" &&
+      (descriptor as any).Lines?.some((line: any) =>
+        typeof line.Text === "string" && /please update spicy lyrics/i.test(line.Text))) {
+    descriptor = "provider-update-required";
+  }
 
   // Fetching is async, so a result can land after the user has already skipped
   // on. Applying it would paint the previous track's lyrics — or its "no
@@ -73,6 +80,10 @@ export default async function ApplyLyrics(lyricsContent: FetchLyricsResult): Pro
   let noticeContent: string | null = null;
 
   switch (descriptor) {
+    case "provider-update-required": {
+      noticeContent = "The upstream lyrics service requires a different client version. Restarting this fork will not resolve it. You can import lyrics through Lyrics Manager.";
+      break;
+    }
     case "lyrics-queued": {
       // HTTP 503: the lyrics server has queued our request. Keep the loader and
       // queue message visible (LyricsQueueRetry drives the backoff retry loop)
@@ -167,14 +178,14 @@ export default async function ApplyLyrics(lyricsContent: FetchLyricsResult): Pro
 
     currentNoticeElement.innerHTML = `
       <p class="notice-descriptor">${noticeContent.trim()}</p>
-      <p class="notice-footer">Need more help? Join our <a>Discord</a>.</p>
+      <p class="notice-footer">Need help? Visit this fork's <a>GitHub issues</a>.</p>
     `;
 
     // Add click handler to log when the Discord link is clicked
     const discordLink = currentNoticeElement.querySelector("a");
     if (discordLink) {
       discordLink.addEventListener("click", () => {
-        window.open("https://discord.com/invite/uqgXU5wh8j", "_blank");
+        window.open("https://github.com/JosEffigy/spicy-lyrics-v3/issues", "_blank");
       }, { signal: currentAbortController.signal });
     }
 
