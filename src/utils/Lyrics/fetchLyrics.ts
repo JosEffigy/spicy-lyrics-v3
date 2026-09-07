@@ -23,6 +23,12 @@ export const LyricsStore = GetExpireStore<any>("SpicyLyrics_LyricsStore_g1", 4, 
 
 const lyricsPacker = new SLObjPack();
 
+function isUpdateNotice(data: any): boolean {
+  return data?.Type === "Static" && Array.isArray(data.Lines) &&
+    data.Lines.some((line: any) => typeof line?.Text === "string" &&
+      /please update spicy lyrics/i.test(line.Text));
+}
+
 function setRomanizationClass(hasTransliterations: boolean | undefined): void {
   if (hasTransliterations) {
     PageContainer?.classList.add("Lyrics_RomanizationAvailable");
@@ -174,7 +180,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
       } else {
         const lyricsData = JSON.parse(savedLyricsData);
         // Return the stored lyrics if the URI matches the current track URI
-        if (lyricsData?.uri === uri) {
+        if (lyricsData?.uri === uri && !isUpdateNotice(lyricsData)) {
           presentLyrics(lyricsData);
           return [lyricsData, 200];
         }
@@ -207,7 +213,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
   if (LyricsStore) {
     try {
       const lyricsFromCacheRes = await LyricsStore.GetItem(trackId);
-      if (lyricsFromCacheRes) {
+      if (lyricsFromCacheRes && !isUpdateNotice(lyricsFromCacheRes)) {
         if (lyricsFromCacheRes?.Value === "NO_LYRICS") {
           $currentlyFetching.set(false);
           return ["lyrics-not-found", 404];
@@ -305,6 +311,12 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
     }
 
     const lyrics = lyricsPacker.unpack(lyricsQuery.data) as any;
+
+    if (isUpdateNotice(lyrics)) {
+      HideLoaderContainer();
+      $currentlyFetching.set(false);
+      return ["provider-update-required", 200];
+    }
 
     if (lyrics === null || lyrics === undefined || lyrics === "") {
       HideLoaderContainer();

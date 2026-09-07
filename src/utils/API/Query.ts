@@ -1,5 +1,5 @@
 import Defaults from "../../components/Global/Defaults.ts";
-import Session from "../../components/Global/Session.ts";
+import { LyricsApiVersion } from "../../../project/config.ts";
 import Logger from "../Logger.ts";
 import {
   Acquire,
@@ -95,7 +95,7 @@ export async function Query(
   options: QueryOptions = {}
 ): Promise<QueryResultGetter> {
   const host = Defaults.lyrics.api.url;
-  const clientVersion = Session.SpicyLyrics.GetCurrentVersion();
+  const clientVersion = { Text: LyricsApiVersion };
 
   // Throws ServiceUnavailableError rather than touching the network when the
   // breaker is open. Doing this before `fetch` also spares the CORS preflight,
