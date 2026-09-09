@@ -24,7 +24,7 @@ import { requestPositionSync } from "./utils/Gets/GetProgress.ts";
 import { IntervalManager } from "./utils/IntervalManager.ts";
 import fetchLyrics from "./utils/Lyrics/fetchLyrics.ts";
 import ApplyLyrics from "./utils/Lyrics/Global/Applyer.ts";
-import { ScrollingIntervalTime } from "./utils/Lyrics/lyrics.ts";
+import { ScrollingIntervalTime, startLyricsAnimation } from "./utils/Lyrics/lyrics.ts";
 import { ScrollToActiveLine } from "./utils/Scrolling/ScrollToActiveLine.ts";
 import { ScrollSimplebar } from "./utils/Scrolling/Simplebar/ScrollSimplebar.ts";
 import { $fromVersion, $lastFetchedUri, $previousVersion } from "./utils/uiState.ts";
@@ -48,6 +48,7 @@ import { jitter } from "./utils/jitter.ts";
 import type { ModuleRuntimeContext } from "/modules/stdlib/mod.ts";
 
 export async function start(ctx: ModuleRuntimeContext) {
+  ctx.defer(startLyricsAnimation());
   ctx.defer(async () => {
     Global.Event.clearAll();
     document

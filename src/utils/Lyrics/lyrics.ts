@@ -5,6 +5,7 @@ import { SpotifyPlayer } from "../../components/Global/SpotifyPlayer.ts";
 import { Lyrics } from "./Animator/Main.ts";
 import { PageContainer } from "../../components/Pages/PageView.ts";
 import { Maid } from "../../modules/Maid.ts";
+import { createFrameLoop } from "./FrameLoop.ts";
 
 export const ScrollingIntervalTime = Infinity;
 
@@ -222,10 +223,21 @@ const LyricsInterval = () => {
     Lyrics.TimeSetter(progress);
     Lyrics.Animate(progress);
   }
-  requestAnimationFrame(LyricsInterval);
 };
 
-LyricsInterval();
+export function startLyricsAnimation() {
+  const loop = createFrameLoop(LyricsInterval,
+    callback => requestAnimationFrame(callback), id => cancelAnimationFrame(id));
+  const sync = () => loop.setActive($lyricsContainerExists.get() &&
+    (!document.hidden || (!!PageContainer && PageContainer.ownerDocument !== document)));
+  const unsubscribe = $lyricsContainerExists.subscribe(sync);
+  document.addEventListener("visibilitychange", sync);
+  return () => {
+    unsubscribe();
+    document.removeEventListener("visibilitychange", sync);
+    loop.dispose();
+  };
+}
 
 // Define proper types for event listener variables
 let LinesEvListenerMaid: Maid | null = null;

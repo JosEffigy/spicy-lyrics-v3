@@ -6,6 +6,7 @@ import { LyricsObject, SimpleLyricsMode_LetterEffectsStrengthConfig, preHiddenDo
 import { BlurMultiplier, timeOffset } from "../Shared.ts";
 import { setOnNewElementMounted } from "../../LyricsVirtualizer.ts";
 import { Spring } from "../../../../modules/Spring.ts";
+import { setAnimationStyle } from "../../AnimationStyle.ts";
 /* import { CurveInterpolator } from "curve-interpolator"; */
 
 const getSLMAnimation = (duration: number) => {
@@ -301,7 +302,7 @@ function flushStyleBatch(): void {
   if (_styleQueue.size === 0) return;
   for (const [el, props] of _styleQueue) {
     for (const [prop, value] of props) {
-      el.style.setProperty(prop, value);
+      setAnimationStyle(el, prop, value);
     }
   }
   _styleQueue.clear();
@@ -582,27 +583,27 @@ export function Animate(position: number): void {
                      activeIndex: number): void => {
       if (!arr[activeIndex]) return;
 
-      arr[activeIndex].HTMLElement.style.setProperty("--active-line-distance", "0");
+      setAnimationStyle(arr[activeIndex].HTMLElement, "--active-line-distance", "0");
 
       for (let i = activeIndex + 1; i < arr.length; i++) {
           if (getElementState(ProcessedPosition, arr[i].StartTime, arr[i].EndTime) === "Active") {
-            arr[i].HTMLElement.style.setProperty("--active-line-distance", "0");
+            setAnimationStyle(arr[i].HTMLElement, "--active-line-distance", "0");
           } else {
             const maxDist = arr.length - 1 - activeIndex;
             const dist = i - activeIndex;
             const newDist = maxDist - dist + 1;
-            arr[i].HTMLElement.style.setProperty("--active-line-distance", `${newDist}`);
+            setAnimationStyle(arr[i].HTMLElement, "--active-line-distance", `${newDist}`);
           }
       }
 
       for (let i = activeIndex - 1; i >= 0; i--) {
           if (getElementState(ProcessedPosition, arr[i].StartTime, arr[i].EndTime) === "Active") {
-            arr[i].HTMLElement.style.setProperty("--active-line-distance", "0");
+            setAnimationStyle(arr[i].HTMLElement, "--active-line-distance", "0");
           } else {
             const maxDist = activeIndex;
             const dist = activeIndex - i;
             const newDist = maxDist - dist + 1;
-            arr[i].HTMLElement.style.setProperty("--active-line-distance", `${newDist}`);
+            setAnimationStyle(arr[i].HTMLElement, "--active-line-distance", `${newDist}`);
           }
       }
   }; */
@@ -611,7 +612,7 @@ export function Animate(position: number): void {
                      activeIndex: number): void => {
       if (!arr[activeIndex]) return;
 
-      arr[activeIndex].HTMLElement.style.setProperty("--scale-amount", "0");
+      setAnimationStyle(arr[activeIndex].HTMLElement, "--scale-amount", "0");
 
       const baseScale = 0.95;
       const falloff = 0.018;
@@ -620,9 +621,9 @@ export function Animate(position: number): void {
           const distance = i - activeIndex;
           const amount = Math.max(0, baseScale - (falloff * distance));
           if (getElementState(ProcessedPosition, arr[i].StartTime, arr[i].EndTime) === "Active") {
-              arr[i].HTMLElement.style.setProperty("--scale-amount", "0");
+              setAnimationStyle(arr[i].HTMLElement, "--scale-amount", "0");
           } else {
-              arr[i].HTMLElement.style.setProperty("--scale-amount", `${amount}`);
+              setAnimationStyle(arr[i].HTMLElement, "--scale-amount", `${amount}`);
           }
       }
 
@@ -630,9 +631,9 @@ export function Animate(position: number): void {
           const distance = activeIndex - i;
           const amount = Math.max(0, baseScale - (falloff * distance));
           if (getElementState(ProcessedPosition, arr[i].StartTime, arr[i].EndTime) === "Active") {
-            arr[i].HTMLElement.style.setProperty("--scale-amount", `0`);
+            setAnimationStyle(arr[i].HTMLElement, "--scale-amount", `0`);
           } else {
-            arr[i].HTMLElement.style.setProperty("--scale-amount", `${amount}`);
+            setAnimationStyle(arr[i].HTMLElement, "--scale-amount", `${amount}`);
           }
       }
   }; */
@@ -801,7 +802,7 @@ export function Animate(position: number): void {
               if ($simpleLyricsMode.get()) {
                 if (wordState === "Active" && !word.SLMAnimated) {
                   if ($simpleLyricsModeRenderingType.get() === "calculate") {
-                    word.HTMLElement.style.setProperty(
+                    setAnimationStyle(word.HTMLElement,
                       "--SLM_GradientPosition",
                       `${targetGradientPos}%`
                     );
@@ -828,14 +829,14 @@ export function Animate(position: number): void {
                 }
                 if (wordState === "NotSung") {
                   if ($simpleLyricsModeRenderingType.get() === "calculate") {
-                    word.HTMLElement.style.setProperty(
+                    setAnimationStyle(word.HTMLElement,
                       "--SLM_GradientPosition",
                       `${targetGradientPos}%`
                     );
                   } else {
                     if (!word.PreSLMAnimated) {
                       word.HTMLElement.style.animation = "none";
-                      word.HTMLElement.style.setProperty("--SLM_GradientPosition", "-50%");
+                      setAnimationStyle(word.HTMLElement, "--SLM_GradientPosition", "-50%");
                       //word.HTMLElement.style.setProperty("--SLM_TranslateY", "0.01");
                     }
                     word.SLMAnimated = false;
@@ -844,13 +845,13 @@ export function Animate(position: number): void {
                 }
                 if (wordState === "Sung") {
                   if ($simpleLyricsModeRenderingType.get() === "calculate") {
-                    word.HTMLElement.style.setProperty(
+                    setAnimationStyle(word.HTMLElement,
                       "--SLM_GradientPosition",
                       `${targetGradientPos}%`
                     );
                   } else {
                     word.HTMLElement.style.animation = "none";
-                    word.HTMLElement.style.setProperty("--SLM_GradientPosition", "100%");
+                    setAnimationStyle(word.HTMLElement, "--SLM_GradientPosition", "100%");
                     //word.HTMLElement.style.setProperty("--SLM_TranslateY", "-0.03");
                     //word.HTMLElement.style.animation = getSLMAnimation(0);
                     word.SLMAnimated = false;
@@ -858,7 +859,7 @@ export function Animate(position: number): void {
                   }
                 }
               } else {
-                word.HTMLElement.style.setProperty("--gradient-position", `${targetGradientPos}%`);
+                setAnimationStyle(word.HTMLElement, "--gradient-position", `${targetGradientPos}%`);
               }
               // Reduce redundant writes using thresholds for smoother performance
               setStyleIfChanged(
@@ -1142,7 +1143,7 @@ export function Animate(position: number): void {
                 // Apply styles from springs and calculated gradient
                 if ($simpleLyricsMode.get()) {
                   if ($simpleLyricsModeRenderingType.get() === "calculate") {
-                    letter.HTMLElement.style.setProperty(
+                    setAnimationStyle(letter.HTMLElement,
                       "--SLM_GradientPosition",
                       `${targetGradient}%`
                     );
@@ -1155,19 +1156,19 @@ export function Animate(position: number): void {
                     if (letterState === "NotSung") {
                       if (!letter.PreSLMAnimated) {
                         letter.HTMLElement.style.animation = "none";
-                        letter.HTMLElement.style.setProperty("--SLM_GradientPosition", "-50%");
+                        setAnimationStyle(letter.HTMLElement, "--SLM_GradientPosition", "-50%");
                       }
                       letter.SLMAnimated = false;
                     }
                     if (letterState === "Sung") {
                       letter.HTMLElement.style.animation = "none";
-                      letter.HTMLElement.style.setProperty("--SLM_GradientPosition", "100%");
+                      setAnimationStyle(letter.HTMLElement, "--SLM_GradientPosition", "100%");
                       // letter.HTMLElement.style.animation = getSLMAnimation(0);
                       letter.SLMAnimated = false;
                     }
                   }
                 } else {
-                  letter.HTMLElement.style.setProperty("--gradient-position", `${targetGradient}%`);
+                  setAnimationStyle(letter.HTMLElement, "--gradient-position", `${targetGradient}%`);
                 }
                 // Use translate3d to ensure GPU-accelerated transforms
                 setStyleIfChanged(
@@ -1212,9 +1213,9 @@ export function Animate(position: number): void {
 
                 if ($simpleLyricsMode.get()) {
                   letter.HTMLElement.style.animation = "none";
-                  letter.HTMLElement.style.setProperty("--SLM_GradientPosition", "-50%");
+                  setAnimationStyle(letter.HTMLElement, "--SLM_GradientPosition", "-50%");
                 } else {
-                  letter.HTMLElement.style.setProperty("--gradient-position", `-20%`);
+                  setAnimationStyle(letter.HTMLElement, "--gradient-position", `-20%`);
                 }
 
                 setStyleIfChanged(
@@ -1259,9 +1260,9 @@ export function Animate(position: number): void {
 
                 if ($simpleLyricsMode.get()) {
                   letter.HTMLElement.style.animation = "none";
-                  letter.HTMLElement.style.setProperty("--SLM_GradientPosition", "100%");
+                  setAnimationStyle(letter.HTMLElement, "--SLM_GradientPosition", "100%");
                 } else {
-                  letter.HTMLElement.style.setProperty("--gradient-position", `100%`);
+                  setAnimationStyle(letter.HTMLElement, "--gradient-position", `100%`);
                 }
                 setStyleIfChanged(
                   letter.HTMLElement,
@@ -1307,9 +1308,9 @@ export function Animate(position: number): void {
                         word.HTMLElement.style.transform = `translateY(calc(var(--DefaultLyricsSize) * ${currentYOffset}))`;
                         word.HTMLElement.style.scale = `${currentScale}`;
                         if (!word.LetterGroup) {
-                          word.HTMLElement.style.setProperty("--gradient-position", `-20%`);
-                          word.HTMLElement.style.setProperty("--text-shadow-blur-radius", `${4 + (2 * currentGlow * 1)}px`);
-                          word.HTMLElement.style.setProperty("--text-shadow-opacity", `${Math.min(currentGlow * 35, 100)}%`);
+                          setAnimationStyle(word.HTMLElement, "--gradient-position", `-20%`);
+                          setAnimationStyle(word.HTMLElement, "--text-shadow-blur-radius", `${4 + (2 * currentGlow * 1)}px`);
+                          setAnimationStyle(word.HTMLElement, "--text-shadow-opacity", `${Math.min(currentGlow * 35, 100)}%`);
                         }
                   } else if (word.AnimatorStore && word.Dot && !word.LetterGroup) { // Handle dot reset
                       word.AnimatorStore.Scale.SetGoal(DotScaleSpline.at(0));
@@ -1325,8 +1326,8 @@ export function Animate(position: number): void {
                       word.HTMLElement.style.transform = `translateY(calc(var(--DefaultLyricsSize) * ${currentYOffset}))`;
                       word.HTMLElement.style.scale = `${currentScale}`;
                       word.HTMLElement.style.opacity = `${currentOpacity}`;
-                      word.HTMLElement.style.setProperty("--text-shadow-blur-radius", `${4 + (6 * currentGlow)}px`);
-                      word.HTMLElement.style.setProperty("--text-shadow-opacity", `${currentGlow * 90}%`);
+                      setAnimationStyle(word.HTMLElement, "--text-shadow-blur-radius", `${4 + (6 * currentGlow)}px`);
+                      setAnimationStyle(word.HTMLElement, "--text-shadow-opacity", `${currentGlow * 90}%`);
                   } else if (word.LetterGroup) {
                      for (let k = 0; k < word.Letters.length; k++) {
                       const letter = word.Letters[k];
@@ -1346,11 +1347,11 @@ export function Animate(position: number): void {
                       const currentYOffset = letter.AnimatorStore.YOffset.Step(deltaTime);
                       const currentGlow = letter.AnimatorStore.Glow.Step(deltaTime);
 
-                      letter.HTMLElement.style.setProperty("--gradient-position", `-20%`);
+                      setAnimationStyle(letter.HTMLElement, "--gradient-position", `-20%`);
                       letter.HTMLElement.style.transform = `translateY(calc(var(--DefaultLyricsSize) * ${currentYOffset * 2}))`;
                       letter.HTMLElement.style.scale = `${currentScale}`;
-                      letter.HTMLElement.style.setProperty("--text-shadow-blur-radius", `${4 + (8 * currentGlow)}px`);
-                      letter.HTMLElement.style.setProperty("--text-shadow-opacity", `${currentGlow * LetterGlowMultiplier_Opacity}%`);
+                      setAnimationStyle(letter.HTMLElement, "--text-shadow-blur-radius", `${4 + (8 * currentGlow)}px`);
+                      setAnimationStyle(letter.HTMLElement, "--text-shadow-opacity", `${currentGlow * LetterGlowMultiplier_Opacity}%`);
                     }
                   }
               } */
@@ -1409,9 +1410,9 @@ export function Animate(position: number): void {
               if (!word.LetterGroup) {
                 if ($simpleLyricsMode.get()) {
                   word.HTMLElement.style.animation = "none";
-                  word.HTMLElement.style.setProperty("--SLM_GradientPosition", "100%");
+                  setAnimationStyle(word.HTMLElement, "--SLM_GradientPosition", "100%");
                 } else {
-                  word.HTMLElement.style.setProperty("--gradient-position", "100%");
+                  setAnimationStyle(word.HTMLElement, "--gradient-position", "100%");
                 }
                 setStyleIfChanged(
                   word.HTMLElement,
@@ -1604,9 +1605,9 @@ export function Animate(position: number): void {
 
                 if ($simpleLyricsMode.get()) {
                   letter.HTMLElement.style.animation = "none";
-                  letter.HTMLElement.style.setProperty("--SLM_GradientPosition", "100%");
+                  setAnimationStyle(letter.HTMLElement, "--SLM_GradientPosition", "100%");
                 } else {
-                  letter.HTMLElement.style.setProperty("--gradient-position", `100%`);
+                  setAnimationStyle(letter.HTMLElement, "--gradient-position", `100%`);
                 }
                 setStyleIfChanged(
                   letter.HTMLElement,
@@ -1615,11 +1616,11 @@ export function Animate(position: number): void {
                   0.001
                 );
                 setStyleIfChanged(letter.HTMLElement, "scale", `${currentScale}`, 0.001);
-                letter.HTMLElement.style.setProperty(
+                setAnimationStyle(letter.HTMLElement,
                   "--text-shadow-blur-radius",
                   `${4 + 12 * currentGlow}px`
                 );
-                letter.HTMLElement.style.setProperty(
+                setAnimationStyle(letter.HTMLElement,
                   "--text-shadow-opacity",
                   `${currentGlow * LetterGlowMultiplier_Opacity}%`
                 );
@@ -1789,7 +1790,7 @@ export function Animate(position: number): void {
 
           // Apply styles using spring value for glow, keep direct calculation for gradient
           if (!$simpleLyricsMode.get()) {
-            line.HTMLElement.style.setProperty("--gradient-position", `${targetGradientPos}%`);
+            setAnimationStyle(line.HTMLElement, "--gradient-position", `${targetGradientPos}%`);
             setStyleIfChanged(
               line.HTMLElement,
               "--text-shadow-blur-radius",
