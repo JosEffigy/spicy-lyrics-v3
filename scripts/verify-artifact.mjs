@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
-const version = "7.1.3";
-const artifact = `spicy-lyrics@${version}.zip`;
+const version = "7.2.0";
+const artifact = `sakura-lyrics@${version}.zip`;
 const bytes = await readFile(artifact);
 const zip = await JSZip.loadAsync(bytes);
 const required = ["index.js", "index.css", "metadata.json", "spicetify-module.json"];
@@ -13,7 +13,7 @@ for (const name of required) {
 }
 
 const metadata = JSON.parse(await zip.file("metadata.json").async("string"));
-if (metadata.name !== "spicy-lyrics" || metadata.version !== version) {
+if (metadata.name !== "sakura-lyrics" || metadata.version !== version) {
   throw new Error("Artifact metadata does not match the requested module version");
 }
 

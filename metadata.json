@@ -1,9 +1,11 @@
 {
-  "name": "spicy-lyrics",
+  "name": "sakura-lyrics",
   "kind": "extension",
-  "version": "7.1.3",
-  "authors": ["Spikerko"],
-  "description": "Animated, word-synced lyrics ported to the Spicetify v3 module and Store framework.",
+  "version": "7.2.0",
+  "authors": ["Spikerko", "JosEffigy"],
+  "description": "Sakura Lyrics: an unofficial, vibe-coded fork of Spikerko's Spicy Lyrics, focused on Japanese romaji and rendering optimizations.",
+  "repository": "https://github.com/JosEffigy/spicy-lyrics-v3",
+  "license": "AGPL-3.0-only",
   "entries": {
     "js": "index.js",
     "css": "index.css"

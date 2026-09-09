@@ -1,53 +1,52 @@
-# Spicy Lyrics for Spicetify v3
+# Sakura Lyrics
 
-Clean-history port of [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) to Spicetify's v3 module runtime and in-client Store format.
+An unofficial fork of [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) for Spicetify v3, maintained by [JosEffigy](https://github.com/JosEffigy).
 
-> Spicetify v3 is currently beta software. This port targets the published v3 module contract and requires the `stdlib` module declared in `metadata.json`.
+**Spicy Lyrics was created by [Spikerko](https://github.com/Spikerko).** Sakura Lyrics builds on that work; it is not an official Spikerko release or an endorsed replacement. The original renderer, design and much of the feature code come from Spicy Lyrics.
+
+This fork is **vibe-coded**: changes are developed with substantial AI assistance. Its focus is Japanese romaji—readings, small tsu, word spacing and karaoke segments—plus reducing unnecessary rendering work. Tests are not a guarantee of correct readings or bug-free playback. Live CPU/GPU savings have not been measured.
+
+## Install online
+
+Requires Spicetify v3. Store admission is pending review; the release can be installed directly:
+
+```powershell
+spicetify pkg install sakura-lyrics@7.2.0 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.2.0/sakura-lyrics@7.2.0.zip"
+spicetify pkg enable sakura-lyrics@7.2.0
+spicetify apply
+```
+
+If upgrading from this repository's old package, disable it first with
+`spicetify pkg disable spicy-lyrics`. Do not enable both packages together.
+Internal settings keys are retained; the repository URL stays the same.
+
+## What changed
+
+- Phrase-based Japanese readings and word spacing, independent of karaoke timing.
+- Small-tsu handling across segments, including half-width kana.
+- Shared dictionary work, loading timeouts and fallbacks that keep lyrics visible.
+- Fewer idle animation frames and redundant style writes.
+
+Readings still depend on a dictionary. Unusual names, sung readings and word boundaries can be wrong; timing within a word is approximate. Lyrics still use upstream provider services, so availability depends on them. Fork update/support links point here.
 
 ## Build
 
-Requires Node.js 24 and pnpm 10.28 or newer within the pnpm 10 release line.
+Requires Node.js 24 and pnpm 10.
 
 ```powershell
 pnpm install
 pnpm check
 pnpm build
 pnpm run pack
+pnpm run verify
 ```
 
-The build is written to `dist/spicy-lyrics@7.1.3/`; the packed Store artifact is a versioned ZIP with a printed SHA-256 checksum.
+Output: `dist/sakura-lyrics@7.2.0/` and `sakura-lyrics@7.2.0.zip`.
 
-## Install online
+## Credits and license
 
-Fork updates and support are handled through this repository. Upstream update checks are disabled. Lyrics requests use the upstream API compatibility version independently from the fork package version. Cached provider update notices are retried instead of reused as lyrics.
+Original project and creator: **Spicy Lyrics by Spikerko**, with its upstream contributors.
+Fork maintenance and AI-assisted changes: **JosEffigy**.
+The listing preview is inherited Spicy Lyrics artwork, not an original Sakura design.
 
-After publishing `spicy-lyrics@7.1.3.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
-
-```powershell
-spicetify pkg install spicy-lyrics@7.1.3 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.1.3/spicy-lyrics@7.1.3.zip"
-spicetify pkg enable spicy-lyrics@7.1.3
-spicetify apply
-```
-
-The URL must point directly to the ZIP release asset, not the repository page.
-
-## Install a local build
-
-```powershell
-spicetify pkg install spicy-lyrics@7.1.3 ".\dist\spicy-lyrics@7.1.3"
-spicetify pkg enable spicy-lyrics@7.1.3
-spicetify apply
-```
-
-The module exposes the v3 `load(ctx)` lifecycle and registers cleanup with `ctx.defer`, allowing the runtime to unload or roll back the module.
-
-## Port status
-
-- TypeScript and the v3 module-standard error tier pass.
-- The Store artifact builds and is structurally verified.
-- The inherited feature code still uses classic `Spicetify.*` APIs and several Spotify DOM selectors. V3 currently provides compatibility shims for these, but the framework audit reports them as advisory coupling warnings.
-- `7.0.0-beta.6` has been installed and staged with Spicetify `3.0.0-beta.12`; full lyrics playback still needs broader runtime testing.
-
-## License
-
-AGPL-3.0-only. This is a derivative of Spicy Lyrics; upstream copyright and license terms are preserved in [LICENSE](LICENSE).
+AGPL-3.0-only. Original copyright notices and the [license](LICENSE) are preserved.

@@ -709,7 +709,7 @@ function AppendViewControls(ReAppend: boolean = false) {
       try {
         Tooltips.Settings = Spicetify.Tippy(settingsButton, {
           ...Spicetify.TippyProps,
-          content: `Spicy Lyrics Settings`,
+          content: `Sakura Lyrics Settings`,
         });
         settingsButton.addEventListener("click", () => {
           openSettingsPanel();

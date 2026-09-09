@@ -3,9 +3,9 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
-const version = "7.1.3";
-const source = path.resolve(`dist/spicy-lyrics@${version}`);
-const output = path.resolve(`spicy-lyrics@${version}.zip`);
+const version = "7.2.0";
+const source = path.resolve(`dist/sakura-lyrics@${version}`);
+const output = path.resolve(`sakura-lyrics@${version}.zip`);
 const zip = new JSZip();
 
 async function addDirectory(directory, prefix = "") {

@@ -252,7 +252,7 @@ export async function start(ctx: ModuleRuntimeContext) {
       {
         Registered: false,
         Button: new SpotifyPlayer.Playbar.Button(
-          "Spicy Lyrics",
+          "Sakura Lyrics",
           Icons.LyricsPage,
           (self) => {
             if (!self.active) {
@@ -473,7 +473,7 @@ export async function start(ctx: ModuleRuntimeContext) {
       );
 
       PopupModal.display({
-        title: "Spicy Lyrics",
+        title: "Sakura Lyrics",
         content: div,
         isLarge: true,
         onClose: () => {
@@ -814,7 +814,7 @@ export async function start(ctx: ModuleRuntimeContext) {
     }
 
     if (button) {
-      button.Button.tippy.setContent("Spicy Lyrics");
+      button.Button.tippy.setContent("Sakura Lyrics");
     }
 
     /*
@@ -823,7 +823,7 @@ export async function start(ctx: ModuleRuntimeContext) {
     let wasPageViewTippyShown = false;
     button.Button.tippy.setProps({
       ...Spicetify.TippyProps,
-      content: `Spicy Lyrics`,
+      content: `Sakura Lyrics`,
       allowHTML: true,
       onShow(instance: any) {
         // Spotify's Code
@@ -854,7 +854,7 @@ export async function start(ctx: ModuleRuntimeContext) {
             TippyElementContent.style.borderRadius = "";
 
             TippyElementContent.innerHTML = ""
-            instance.setContent("Spicy Lyrics");
+            instance.setContent("Sakura Lyrics");
 
             return;
           };
@@ -945,7 +945,7 @@ export async function start(ctx: ModuleRuntimeContext) {
               }
             );
           } catch (err) {
-            console.error("Spicy Lyrics: couldn't listen for volume changes", err);
+            console.error("Sakura Lyrics: couldn't listen for volume changes", err);
           }
         }
       );
@@ -1121,7 +1121,7 @@ export async function start(ctx: ModuleRuntimeContext) {
 
 
   const settingsMenuItem = new Spicetify.Menu.Item(
-		"Spicy Lyrics Settings",
+		"Sakura Lyrics Settings",
 		false,
 		() => {
 			openSettingsPanel();
