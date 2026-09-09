@@ -6,7 +6,7 @@ import { RetrievePackage } from "../ImportPackage.ts";
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts";
 import { PageContainer } from "../../components/Pages/PageView.ts";
 import Logger from "../Logger.ts";
-import { contextualReadings, hasJapanese } from "./JapaneseContext.ts";
+import { contextualReadings, hasJapanese, hasSmallTsu, romanizeKana } from "./JapaneseContext.ts";
 
 // Constants
 const RomajiConverter = new Kuroshiro();
@@ -118,6 +118,7 @@ const loadPackagesForScripts = async (
 // through unchanged so they can be composed for mixed-script text. ---
 
 const romanizeJapaneseText = async (text: string): Promise<string> => {
+  if (!/\p{Script=Han}/u.test(text)) return romanizeKana(text);
   await ensureRomaji();
   let pending = romajiCache.get(text);
   if (!pending) {
@@ -263,7 +264,8 @@ const romanizeEntry = async (
   const { target, line } = entry;
 
   // Prefer a transliteration the API already provided — only fill in the gaps.
-  if (hasTransliteration(target)) return false;
+  if (hasTransliteration(target) &&
+      !(presentScripts.includes("Japanese") && hasSmallTsu(target.Text))) return false;
 
   // Preserve provider readings that are already correct; repair only residual
   // script in a partially converted reading, rather than replacing the whole.
@@ -329,7 +331,7 @@ export const ProcessLyrics = async (lyrics: any) => {
   lyrics.Language = language;
   lyrics.LanguageISO2 = languageISO2;
 
-  const presentScripts = detectPresentScripts(scriptText, language, languageISO2);
+  const presentScripts = detectPresentScripts(scriptText.normalize("NFKC"), language, languageISO2);
   const contextualTargets = new Set<any>();
 
   if (presentScripts.includes("Japanese") && lyrics.Type === "Syllable") {
@@ -338,7 +340,8 @@ export const ProcessLyrics = async (lyrics: any) => {
       for (const vocal of [group.Lead, ...(group.Background ?? [])]) {
         const syllables = vocal?.Syllables ?? [];
         if (!syllables.some((s: any) => hasJapanese(s.Text)) ||
-            syllables.every(hasTransliteration)) continue;
+            (syllables.every(hasTransliteration) &&
+             !syllables.some((s: any) => hasSmallTsu(s.Text)))) continue;
         await ensureRomaji();
         const readings = await contextualReadings(
           syllables.map((s: any) => s.Text),
@@ -358,7 +361,8 @@ export const ProcessLyrics = async (lyrics: any) => {
   // Skip the work (incl. loading packages) when there are no romanizable scripts
   // or every entry already has a transliteration.
   let appliedRomanization = false;
-  if (presentScripts.length > 0 && entries.some((entry) => !hasTransliteration(entry.target))) {
+  if (presentScripts.length > 0 && entries.some((entry) => !hasTransliteration(entry.target) ||
+      (presentScripts.includes("Japanese") && hasSmallTsu(entry.target.Text)))) {
     const packages = await loadPackagesForScripts(presentScripts);
     const results = await Promise.all(
       entries.filter((entry) => !contextualTargets.has(entry.target))

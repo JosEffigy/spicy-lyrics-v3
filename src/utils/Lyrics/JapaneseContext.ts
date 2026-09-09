@@ -1,3 +1,10 @@
+import Kuroshiro from "kuroshiro";
+
+export const hasSmallTsu = (text: string) => /[っッ]/u.test(text.normalize("NFKC"));
+export const romanizeKana = (text: string): string =>
+  (Kuroshiro.Util ?? (Kuroshiro as any).default.Util)
+    .kanaToRomaji(text.normalize("NFKC"), "hepburn");
+
 export interface ReadingToken {
   surface_form: string;
   reading?: string;
@@ -37,7 +44,23 @@ export async function contextualReadings(
     }
   };
   let cursor = 0;
-  for (const token of await tokenize(text)) {
+  const tokens = await tokenize(text);
+  for (let index = 0; index < tokens.length; index++) {
+    const token = { ...tokens[index] };
+    // Sokuon needs the following consonant across tokenizer boundaries.
+    let combinedReading = token.pronunciation || token.reading || token.surface_form;
+    while (/[っッ]$/u.test(combinedReading.normalize("NFKC")) && index + 1 < tokens.length) {
+      const next = tokens[index + 1];
+      const nextReading = next.pronunciation || next.reading || next.surface_form;
+      const tokenStart = text.indexOf(token.surface_form, cursor);
+      if (!/^[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(nextReading) ||
+          tokenStart < cursor ||
+          !text.slice(tokenStart).startsWith(token.surface_form + next.surface_form)) break;
+      token.surface_form += next.surface_form;
+      combinedReading += nextReading;
+      token.pronunciation = combinedReading;
+      index++;
+    }
     if (!token.surface_form) continue;
     const start = text.indexOf(token.surface_form, cursor);
     if (start < cursor) throw new Error("Japanese tokenizer lost source alignment");

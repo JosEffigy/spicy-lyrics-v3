@@ -15,17 +15,17 @@ pnpm build
 pnpm run pack
 ```
 
-The build is written to `dist/spicy-lyrics@7.1.0/`; the packed Store artifact is a versioned ZIP with a printed SHA-256 checksum.
+The build is written to `dist/spicy-lyrics@7.1.1/`; the packed Store artifact is a versioned ZIP with a printed SHA-256 checksum.
 
 ## Install online
 
 Fork updates and support are handled through this repository. Upstream update checks are disabled. Lyrics requests use the upstream API compatibility version independently from the fork package version. Cached provider update notices are retried instead of reused as lyrics.
 
-After publishing `spicy-lyrics@7.1.0.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
+After publishing `spicy-lyrics@7.1.1.zip` as a GitHub release asset, replace `JosEffigy` with the repository owner's GitHub username:
 
 ```powershell
-spicetify pkg install spicy-lyrics@7.1.0 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.1.0/spicy-lyrics@7.1.0.zip"
-spicetify pkg enable spicy-lyrics@7.1.0
+spicetify pkg install spicy-lyrics@7.1.1 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.1.1/spicy-lyrics@7.1.1.zip"
+spicetify pkg enable spicy-lyrics@7.1.1
 spicetify apply
 ```
 
@@ -34,8 +34,8 @@ The URL must point directly to the ZIP release asset, not the repository page.
 ## Install a local build
 
 ```powershell
-spicetify pkg install spicy-lyrics@7.1.0 ".\dist\spicy-lyrics@7.1.0"
-spicetify pkg enable spicy-lyrics@7.1.0
+spicetify pkg install spicy-lyrics@7.1.1 ".\dist\spicy-lyrics@7.1.1"
+spicetify pkg enable spicy-lyrics@7.1.1
 spicetify apply
 ```
 
