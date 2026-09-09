@@ -9,6 +9,23 @@ export interface ReadingToken {
   surface_form: string;
   reading?: string;
   pronunciation?: string;
+  pos?: string;
+  pos_detail_1?: string;
+}
+
+// Display words are not karaoke beats, nor always individual morphemes.
+// Keep inflections, suffixes and prefixes attached; separate particles and
+// independent words. Preserve punctuation and explicit source whitespace.
+function needsSpace(previous: ReadingToken, current: ReadingToken): boolean {
+  const left = previous.surface_form;
+  const right = current.surface_form;
+  if (!/[\p{L}\p{N}]$/u.test(left) || !/^[\p{L}\p{N}]/u.test(right)) return false;
+  if (!hasJapanese(left + right)) return false;
+  if (current.pos === "助動詞" || current.pos_detail_1 === "接尾" ||
+      previous.pos === "接頭詞") return false;
+  if (current.pos === "助詞" && current.pos_detail_1 === "接続助詞" &&
+      ["動詞", "形容詞", "助動詞"].includes(previous.pos ?? "")) return false;
+  return true;
 }
 
 export const hasJapanese = (text: string) =>
@@ -27,11 +44,13 @@ export async function contextualReadings(
   const ends: number[] = [];
   let total = 0;
   for (const segment of segments) ends.push(total += segment.length);
+  let firstSegment = 0;
   const distribute = (start: number, end: number, value: string) => {
     const units = value.match(/(?:[bcdfghjklmpqrstvwxyz]*[aeiouāīūēō]|n'|n|[\s\S])/giu) ?? [];
     let previous = 0;
-    let segmentStart = 0;
-    for (let i = 0; i < ends.length; i++) {
+    while (firstSegment < ends.length && ends[firstSegment] <= start) firstSegment++;
+    let segmentStart = firstSegment === 0 ? 0 : ends[firstSegment - 1];
+    for (let i = firstSegment; i < ends.length && segmentStart < end; i++) {
       const left = Math.max(start, segmentStart);
       const right = Math.min(end, ends[i]);
       if (right > left) {
@@ -44,6 +63,7 @@ export async function contextualReadings(
     }
   };
   let cursor = 0;
+  let previousToken: ReadingToken | undefined;
   const tokens = await tokenize(text);
   for (let index = 0; index < tokens.length; index++) {
     const token = { ...tokens[index] };
@@ -67,14 +87,23 @@ export async function contextualReadings(
     if (start > cursor) distribute(cursor, start, text.slice(cursor, start));
     const end = start + token.surface_form.length;
     const reading = [token.pronunciation, token.reading].find(
-      (value) => value && value !== "*" && !/\p{Script=Han}/u.test(value)
+      (value) => value && value !== "*" &&
+        /^[\p{Script=Hiragana}\p{Script=Katakana}ー]+$/u.test(value.normalize("NFKC"))
     );
     // No fabricated reading for unknown kanji: retain the source visibly.
     const converted = hasJapanese(token.surface_form)
       ? await romanize(reading ?? token.surface_form)
       : token.surface_form;
+    if (previousToken && start === cursor && needsSpace(previousToken, token)) {
+      // Attach the separator to the source boundary, not a proportional slice
+      // of the reading (which could insert it inside a split word).
+      let target = firstSegment;
+      while (target < ends.length && ends[target] <= start) target++;
+      if (target < ends.length) output[target] += " ";
+    }
     distribute(start, end, converted);
     cursor = end;
+    previousToken = token;
   }
   if (cursor < text.length) distribute(cursor, text.length, text.slice(cursor));
   return output;

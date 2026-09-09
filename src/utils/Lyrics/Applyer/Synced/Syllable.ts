@@ -1,5 +1,6 @@
 import { $lyricsContainerExists, $minimalLyricsMode, $simpleLyricsMode } from "../../../../utils/stores.ts";
 import { PageContainer } from "../../../../components/Pages/PageView.ts";
+import { romanizedSegments } from "../../RomanizedSegments.ts";
 import { applyStyles, removeAllStyles } from "../../../CSS/Styles.ts";
 import {
   ClearScrollSimplebar,
@@ -37,6 +38,7 @@ interface SyllableData {
   StartTime: number;
   EndTime: number;
   IsPartOfWord?: boolean;
+  RomanizedIsPartOfWord?: boolean;
 }
 
 interface LeadData {
@@ -231,7 +233,7 @@ export function ApplySyllableLyrics(data: LyricsData, UseRomanized: boolean = fa
 
     let currentWordGroup: HTMLSpanElement | null = null;
 
-    line.Lead.Syllables.forEach((lead, iL, aL) => {
+    romanizedSegments(line.Lead.Syllables, UseRomanized).forEach((lead, iL, aL) => {
       let word = document.createElement("span");
 
       if (isRtl(lead.Text) && !lineElem.classList.contains("rtl")) {
@@ -340,7 +342,7 @@ export function ApplySyllableLyrics(data: LyricsData, UseRomanized: boolean = fa
 
         let currentBGWordGroup: HTMLSpanElement | null = null;
 
-        bg.Syllables.forEach((bw, bI, bA) => {
+        romanizedSegments(bg.Syllables, UseRomanized).forEach((bw, bI, bA) => {
           let bwE = document.createElement("span");
 
           if (isRtl(bw.Text) && !lineE.classList.contains("rtl")) {

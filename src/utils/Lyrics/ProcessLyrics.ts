@@ -1,19 +1,18 @@
 import cyrillicToLatin from "cyrillic-romanization";
 import { franc } from "franc-all";
-import Kuroshiro from "kuroshiro";
 import langs from "langs";
 import { RetrievePackage } from "../ImportPackage.ts";
 import * as KuromojiAnalyzer from "./KuromojiAnalyzer.ts";
 import { PageContainer } from "../../components/Pages/PageView.ts";
 import Logger from "../Logger.ts";
-import { contextualReadings, hasJapanese, hasSmallTsu, romanizeKana } from "./JapaneseContext.ts";
+import { hasJapanese } from "./JapaneseContext.ts";
+import { createJapaneseEngine } from "./JapaneseEngine.ts";
 
 // Constants
-const RomajiConverter = new Kuroshiro();
-let romajiPromise: Promise<any> | undefined;
-const ensureRomaji = () => romajiPromise ??= RomajiConverter.init(KuromojiAnalyzer)
-  .catch((error: unknown) => { romajiPromise = undefined; throw error; });
-const romajiCache = new Map<string, Promise<string>>();
+const japaneseEngine = createJapaneseEngine(async (text) => {
+  await KuromojiAnalyzer.init();
+  return KuromojiAnalyzer.parse(text);
+});
 
 const romanizationLogger = new Logger("Lyrics Romanization");
 
@@ -102,7 +101,7 @@ const loadPackagesForScripts = async (
   const packages: RomanizationPackages = {};
   for (const script of scripts) {
     if (script === "Japanese") {
-      await ensureRomaji();
+      // The Japanese engine loads its analyzer lazily and handles outages.
     } else if (script === "Chinese") {
       packages.pinyin = await RetrievePackage("pinyin", "4.0.0", "mjs");
     } else if (script === "Korean") {
@@ -116,19 +115,6 @@ const loadPackagesForScripts = async (
 
 // --- Pure converter steps: romanize their own script, pass everything else
 // through unchanged so they can be composed for mixed-script text. ---
-
-const romanizeJapaneseText = async (text: string): Promise<string> => {
-  if (!/\p{Script=Han}/u.test(text)) return romanizeKana(text);
-  await ensureRomaji();
-  let pending = romajiCache.get(text);
-  if (!pending) {
-    pending = RomajiConverter.convert(text.normalize("NFKC"), { to: "romaji", mode: "spaced" })
-      .catch((error: unknown) => { romajiCache.delete(text); throw error; });
-    if (romajiCache.size >= 512) romajiCache.delete(romajiCache.keys().next().value!);
-    romajiCache.set(text, pending!);
-  }
-  return await pending!;
-};
 
 const romanizeChineseText = (text: string, pinyin: any): string => {
   if (!pinyin) return text;
@@ -263,9 +249,9 @@ const romanizeEntry = async (
 ): Promise<boolean> => {
   const { target, line } = entry;
 
-  // Prefer a transliteration the API already provided — only fill in the gaps.
+  // Japanese uses source-driven validation; other scripts keep provider readings.
   if (hasTransliteration(target) &&
-      !(presentScripts.includes("Japanese") && hasSmallTsu(target.Text))) return false;
+      !(presentScripts.includes("Japanese") && hasJapanese(target.Text.normalize("NFKC")))) return false;
 
   // Preserve provider readings that are already correct; repair only residual
   // script in a partially converted reading, rather than replacing the whole.
@@ -275,8 +261,8 @@ const romanizeEntry = async (
 
   for (const script of presentScripts) {
     if (script === "Japanese") {
-      if (ItemJapaneseTest.test(text)) {
-        text = await romanizeJapaneseText(text);
+      if (ItemJapaneseTest.test(text.normalize("NFKC"))) {
+        text = (await japaneseEngine([text], [target.TransliteratedText]))[0];
         changed = true;
       }
     } else if (script === "Chinese") {
@@ -319,9 +305,7 @@ const romanizeEntry = async (
 };
 
 export const ProcessLyrics = async (lyrics: any) => {
-  // Transliterations the API already shipped are preferred and never overwritten,
-  // but we still romanize any entry that's missing one — partial API data should
-  // not leave gaps.
+  // Provider readings remain available as fallback if Japanese analysis fails.
   const hadApiTransliterations = lyrics.HasTransliterations === true;
 
   const { francText, scriptText, entries } = gatherText(lyrics);
@@ -339,17 +323,19 @@ export const ProcessLyrics = async (lyrics: any) => {
       if (group.Type !== "Vocal") continue;
       for (const vocal of [group.Lead, ...(group.Background ?? [])]) {
         const syllables = vocal?.Syllables ?? [];
-        if (!syllables.some((s: any) => hasJapanese(s.Text)) ||
-            (syllables.every(hasTransliteration) &&
-             !syllables.some((s: any) => hasSmallTsu(s.Text)))) continue;
-        await ensureRomaji();
-        const readings = await contextualReadings(
+        if (!syllables.some((s: any) => hasJapanese(s.Text.normalize("NFKC")))) continue;
+        const readings = await japaneseEngine(
           syllables.map((s: any) => s.Text),
-          KuromojiAnalyzer.parse,
-          romanizeJapaneseText,
+          syllables.map((s: any) => s.TransliteratedText),
         );
-        for (let i = 0; i < syllables.length; i++) {
+        let nextReading: string | undefined;
+        for (let i = syllables.length - 1; i >= 0; i--) {
           syllables[i].TransliteratedText = readings[i];
+          // Romanized word boundaries are independent of the original timing
+          // provider's grouping. Keep the original-language flags untouched.
+          syllables[i].RomanizedIsPartOfWord = nextReading !== undefined &&
+            !/\s$/u.test(readings[i]) && !/^\s/u.test(nextReading);
+          if (readings[i].length > 0) nextReading = readings[i];
           contextualTargets.add(syllables[i]);
         }
         group.HasTransliterations = true;
@@ -362,7 +348,7 @@ export const ProcessLyrics = async (lyrics: any) => {
   // or every entry already has a transliteration.
   let appliedRomanization = false;
   if (presentScripts.length > 0 && entries.some((entry) => !hasTransliteration(entry.target) ||
-      (presentScripts.includes("Japanese") && hasSmallTsu(entry.target.Text)))) {
+      (presentScripts.includes("Japanese") && hasJapanese(entry.target.Text.normalize("NFKC"))))) {
     const packages = await loadPackagesForScripts(presentScripts);
     const results = await Promise.all(
       entries.filter((entry) => !contextualTargets.has(entry.target))

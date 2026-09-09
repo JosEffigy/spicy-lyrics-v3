@@ -3,22 +3,42 @@ import { RetrievePackage } from "../ImportPackage.ts";
 
 let Analyzer: any;
 let initialization: Promise<void> | undefined;
+let retryAfter = 0;
 export const init = (): Promise<void> => {
   if (Analyzer !== undefined) {
     return Promise.resolve();
   }
+  if (Date.now() < retryAfter) return Promise.reject(new Error("Japanese analyzer retry cooldown"));
 
   return initialization ??= (async () => {
-    await RetrievePackage("Kuromoji", "1.0.0", "js");
+    let packageTimeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        RetrievePackage("Kuromoji", "1.0.0", "js"),
+        new Promise((_, reject) => {
+          packageTimeout = setTimeout(() => reject(new Error("Japanese package loading timed out")), 15000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(packageTimeout);
+    }
     const deadline = Date.now() + 15000;
     while (!(window as any).kuromoji) {
       if (Date.now() >= deadline) throw new Error("Japanese tokenizer failed to initialize");
       await new Promise((r) => setTimeout(r, 50));
     }
     await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const timeout = setTimeout(() => {
+      settled = true;
+      reject(new Error("Japanese dictionary loading timed out"));
+    }, 15000);
     (window as any).kuromoji.builder({
       dicPath: "https://kuromoji.pkgs.spikerko.org",
     }).build((error: any, analyzer: any) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
       if (error) {
         return reject(error);
       }
@@ -27,10 +47,15 @@ export const init = (): Promise<void> => {
       resolve();
     });
     });
-  })().catch((error) => { initialization = undefined; throw error; });
+  })().catch((error) => {
+    retryAfter = Date.now() + 30000;
+    initialization = undefined;
+    throw error;
+  });
 };
 export const parse = (text = ""): Promise<any> => {
-  if (text.trim() === "" || Analyzer === undefined) {
+  if (Analyzer === undefined) return Promise.reject(new Error("Japanese analyzer is not initialized"));
+  if (text.trim() === "") {
     return Promise.resolve([]);
   }
 

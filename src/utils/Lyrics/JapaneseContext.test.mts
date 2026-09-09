@@ -28,7 +28,7 @@ test("tokenizes the whole compound across karaoke boundaries", async () => {
         { surface_form: "は", pronunciation: "ワ" }];
     },
     async (kana) => ({ "キョウ": "kyō", "ワ": "wa" }[kana] ?? kana));
-  assert.equal(result.join(""), "kyōwa");
+  assert.equal(result.join(""), "kyō wa");
   assert.equal(result.length, 3);
 });
 
