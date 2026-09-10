@@ -1,7 +1,7 @@
 {
   "name": "sakura-lyrics",
   "kind": "extension",
-  "version": "7.2.0",
+  "version": "7.2.1",
   "authors": ["Spikerko", "JosEffigy"],
   "description": "Sakura Lyrics: an unofficial, vibe-coded fork of Spikerko's Spicy Lyrics, focused on Japanese romaji and rendering optimizations.",
   "repository": "https://github.com/JosEffigy/spicy-lyrics-v3",

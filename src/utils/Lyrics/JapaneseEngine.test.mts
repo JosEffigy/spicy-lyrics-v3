@@ -20,6 +20,8 @@ test("failure preserves supplied readings and original unknown kanji, then retri
     return [{surface_form: "今日", reading: "キョウ"}];
   });
   assert.deepEqual(await engine(["今日"], ["kyou"]), ["kyou"]);
+  assert.equal(calls, 0);
+  assert.deepEqual(await engine(["今日"]), ["今日"]);
   assert.deepEqual(await engine(["今日"]), ["kyou"]);
   assert.equal(calls, 2);
   const offline = createJapaneseEngine(async () => { throw Error("offline"); });
@@ -41,9 +43,10 @@ test("invalid alignment falls back without rejecting lyric processing", async ()
   assert.deepEqual(await engine(["今日"], ["kyou"]), ["kyou"]);
 });
 
-test("repairs incorrect Latin provider readings, preserves non-Japanese text", async () => {
+test("preserves supplied readings rather than guessing whether Latin text is correct", async () => {
   const engine = createJapaneseEngine(async surface_form => [{surface_form}]);
-  assert.deepEqual(await engine(["みった"], ["mitsuta"]), ["mitta"]);
+  assert.deepEqual(await engine(["みった"], ["mitsuta"]), ["mitsuta"]);
+  assert.deepEqual(await engine(["みった"]), ["mitta"]);
   assert.deepEqual(await engine(["Hello, world!"]), ["Hello, world!"]);
 });
 

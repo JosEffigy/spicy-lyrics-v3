@@ -7,6 +7,7 @@ import { PageContainer } from "../../components/Pages/PageView.ts";
 import Logger from "../Logger.ts";
 import { hasJapanese } from "./JapaneseContext.ts";
 import { createJapaneseEngine } from "./JapaneseEngine.ts";
+import { captureSourceRomaji, sourceRomaji, completeSourceRomaji } from "./SourceRomaji.ts";
 
 // Constants
 const japaneseEngine = createJapaneseEngine(async (text) => {
@@ -262,7 +263,7 @@ const romanizeEntry = async (
   for (const script of presentScripts) {
     if (script === "Japanese") {
       if (ItemJapaneseTest.test(text.normalize("NFKC"))) {
-        text = (await japaneseEngine([text], [target.TransliteratedText]))[0];
+        text = (await japaneseEngine([text], [sourceRomaji(target)]))[0];
         changed = true;
       }
     } else if (script === "Chinese") {
@@ -304,11 +305,18 @@ const romanizeEntry = async (
   return changed;
 };
 
-export const ProcessLyrics = async (lyrics: any) => {
+export const ProcessLyrics = async (lyrics: any, freshSource = false) => {
   // Provider readings remain available as fallback if Japanese analysis fails.
   const hadApiTransliterations = lyrics.HasTransliterations === true;
 
   const { francText, scriptText, entries } = gatherText(lyrics);
+  if (freshSource) {
+    for (const { target } of entries) {
+      captureSourceRomaji(target);
+      delete target.RomanizedIsPartOfWord;
+    }
+  }
+  lyrics.SakuraRomajiProvenanceVersion = 1;
 
   const language = franc(francText);
   const languageISO2 = langs.where("3", language)?.["1"];
@@ -324,9 +332,12 @@ export const ProcessLyrics = async (lyrics: any) => {
       for (const vocal of [group.Lead, ...(group.Background ?? [])]) {
         const syllables = vocal?.Syllables ?? [];
         if (!syllables.some((s: any) => hasJapanese(s.Text.normalize("NFKC")))) continue;
+        const originals = syllables.map((s: any) => s.Text);
+        const supplied = syllables.map(sourceRomaji);
+        const useSupplied = completeSourceRomaji(originals, supplied);
         const readings = await japaneseEngine(
-          syllables.map((s: any) => s.Text),
-          syllables.map((s: any) => s.TransliteratedText),
+          originals,
+          supplied,
         );
         let nextReading: string | undefined;
         for (let i = syllables.length - 1; i >= 0; i--) {
@@ -335,6 +346,7 @@ export const ProcessLyrics = async (lyrics: any) => {
           // provider's grouping. Keep the original-language flags untouched.
           syllables[i].RomanizedIsPartOfWord = nextReading !== undefined &&
             !/\s$/u.test(readings[i]) && !/^\s/u.test(nextReading);
+          if (useSupplied) delete syllables[i].RomanizedIsPartOfWord;
           if (readings[i].length > 0) nextReading = readings[i];
           contextualTargets.add(syllables[i]);
         }

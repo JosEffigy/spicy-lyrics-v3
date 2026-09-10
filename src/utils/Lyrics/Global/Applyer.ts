@@ -197,7 +197,9 @@ export default async function ApplyLyrics(lyricsContent: FetchLyricsResult): Pro
 
   const romanize = isRomanized;
 
-  if (lyrics.Type === "Syllable") {
+  if (romanize && lyrics.SakuraDirectRomaji?.Type === "Line") {
+    ApplyLineLyrics(lyrics.SakuraDirectRomaji as any, true);
+  } else if (lyrics.Type === "Syllable") {
     ApplySyllableLyrics(lyrics as any, romanize);
   } else if (lyrics.Type === "Line") {
     ApplyLineLyrics(lyrics as any, romanize);

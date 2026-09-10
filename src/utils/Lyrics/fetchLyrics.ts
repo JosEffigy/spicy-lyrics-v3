@@ -6,6 +6,7 @@ import PageView, { PageContainer } from "../../components/Pages/PageView.ts";
 import { Query, QueryHttpError, QueryNetworkError } from "../API/Query.ts";
 import { IsTripStatus, ServiceUnavailableError } from "../API/CircuitBreaker.ts";
 import { ProcessLyrics } from "./ProcessLyrics.ts";
+import { createDirectRomajiLookup, needsDirectRomaji, referenceLines } from "./DirectRomaji.ts";
 import Logger from "../Logger.ts";
 import { LocalLyricsManager } from "./manager/index.ts";
 import { LyricsQueueRetry } from "./LyricsQueueRetry.ts";
@@ -22,6 +23,18 @@ export const LyricsStore = GetExpireStore<any>("SpicyLyrics_LyricsStore_g1", 4, 
 }, isDev as true);
 
 const lyricsPacker = new SLObjPack();
+const lookupDirectRomaji = createDirectRomajiLookup();
+async function prepareRemoteLyrics(lyrics: any, fresh = false) {
+  const uri = SpotifyPlayer.GetUri();
+  const track = {title: SpotifyPlayer.GetName() ?? "",
+    artist: SpotifyPlayer.GetArtists()?.[0]?.name ?? "", duration: SpotifyPlayer.GetDuration() / 1000};
+  await ProcessLyrics(lyrics, fresh);
+  if (!lyrics.SakuraDirectRomaji && needsDirectRomaji(lyrics) &&
+      lyrics.uri === uri && uri === SpotifyPlayer.GetUri()) {
+    const supplied = await lookupDirectRomaji(track, referenceLines(lyrics));
+    if (supplied) lyrics.SakuraDirectRomaji = supplied;
+  }
+}
 
 function isUpdateNotice(data: any): boolean {
   return data?.Type === "Static" && Array.isArray(data.Lines) &&
@@ -180,8 +193,10 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
       } else {
         const lyricsData = JSON.parse(savedLyricsData);
         // Return the stored lyrics if the URI matches the current track URI
-        if (lyricsData?.uri === uri && !isUpdateNotice(lyricsData)) {
-          await ProcessLyrics(lyricsData);
+        if (lyricsData?.uri === uri && !isUpdateNotice(lyricsData) &&
+            lyricsData.SakuraRomajiProvenanceVersion === 1) {
+          await prepareRemoteLyrics(lyricsData);
+          if (isStaleFetch(uri)) return [lyricsData, 200];
           presentLyrics(lyricsData);
           return [lyricsData, 200];
         }
@@ -195,8 +210,8 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
 
   const localLyric = await LocalLyricsManager.get(uri);
   if (localLyric) {
-    const lyricsData = { ...localLyric, uri };
-    await ProcessLyrics(lyricsData);
+    const lyricsData = { ...structuredClone(localLyric), uri };
+    await ProcessLyrics(lyricsData, true);
     if (isStaleFetch(uri)) return [lyricsData, 200];
     $currentLyricsData.set(JSON.stringify(lyricsData));
     presentLyrics(lyricsData);
@@ -215,7 +230,8 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
   if (LyricsStore) {
     try {
       const lyricsFromCacheRes = await LyricsStore.GetItem(trackId);
-      if (lyricsFromCacheRes && !isUpdateNotice(lyricsFromCacheRes)) {
+      if (lyricsFromCacheRes && !isUpdateNotice(lyricsFromCacheRes) &&
+          (lyricsFromCacheRes.Value === "NO_LYRICS" || lyricsFromCacheRes.SakuraRomajiProvenanceVersion === 1)) {
         if (lyricsFromCacheRes?.Value === "NO_LYRICS") {
           $currentlyFetching.set(false);
           return ["lyrics-not-found", 404];
@@ -224,7 +240,7 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
         // re-fetch checks (which match on uri) recognise it — older cache
         // entries predate the uri field.
         const lyricsFromCache = { ...(lyricsFromCacheRes ?? {}), uri };
-        await ProcessLyrics(lyricsFromCache);
+        await prepareRemoteLyrics(lyricsFromCache);
         if (isStaleFetch(uri)) return [{ ...lyricsFromCache, fromCache: true }, 200];
         $currentLyricsData.set(JSON.stringify(lyricsFromCache));
         presentLyrics(lyricsFromCache);
@@ -327,7 +343,8 @@ async function runFetchLyrics(uri: string): Promise<[object | string, number] | 
       return ["lyrics-not-found", 404];
     }
 
-    await ProcessLyrics(lyrics);
+    lyrics.uri = uri;
+    await prepareRemoteLyrics(lyrics, true);
 
     // Stamp the uri so every match downstream (saved-data, re-fetch, cache)
     // keys off the stable uri instead of the API-supplied id.
