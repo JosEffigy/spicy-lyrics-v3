@@ -1,4 +1,4 @@
-import { contextualReadings, hasJapanese, romanizeKana, type ReadingToken } from "./JapaneseContext.ts";
+import { contextualReadings, hasJapanese, joinSuppliedContractions, romanizeKana, type ReadingToken } from "./JapaneseContext.ts";
 import { completeSourceRomaji } from "./SourceRomaji.ts";
 
 // Cache phrase analysis, not timing-specific output. Repeated choruses and
@@ -26,7 +26,18 @@ export function createJapaneseEngine(tokenize: (text: string) => Promise<Reading
     const text = segments.join("");
     // Supplied phrase readings retain singer-specific pronunciations. Never mix
     // provider fragments with proportionally mapped dictionary fragments.
-    if (completeSourceRomaji(segments, provider)) return provider.slice() as string[];
+    if (completeSourceRomaji(segments, provider)) {
+      const supplied = provider.slice() as string[];
+      if (/ん/u.test(text) && /\s+n\s*[a-z]/iu.test(supplied.join(""))) {
+        try {
+          const tokens = await analyze(text.normalize("NFKC"));
+          if (tokens.map(token => token.surface_form).join("") === text.normalize("NFKC")) {
+            return joinSuppliedContractions(tokens, supplied);
+          }
+        } catch { /* Supplied lyrics remain usable without the dictionary. */ }
+      }
+      return supplied;
+    }
     if (!hasJapanese(text.normalize("NFKC"))) return [...segments];
     try {
       const converted = await contextualReadings(segments, analyze, async (reading) => romanizeKana(reading));

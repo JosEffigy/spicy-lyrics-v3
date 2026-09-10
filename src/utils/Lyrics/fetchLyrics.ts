@@ -5,7 +5,7 @@ import { SpotifyPlayer } from "../../components/Global/SpotifyPlayer.ts";
 import PageView, { PageContainer } from "../../components/Pages/PageView.ts";
 import { Query, QueryHttpError, QueryNetworkError } from "../API/Query.ts";
 import { IsTripStatus, ServiceUnavailableError } from "../API/CircuitBreaker.ts";
-import { ProcessLyrics } from "./ProcessLyrics.ts";
+import { ProcessLyrics, processDirectRomajiSpacing } from "./ProcessLyrics.ts";
 import { createDirectRomajiLookup, needsDirectRomaji, referenceLines } from "./DirectRomaji.ts";
 import Logger from "../Logger.ts";
 import { LocalLyricsManager } from "./manager/index.ts";
@@ -34,6 +34,7 @@ async function prepareRemoteLyrics(lyrics: any, fresh = false) {
     const supplied = await lookupDirectRomaji(track, referenceLines(lyrics));
     if (supplied) lyrics.SakuraDirectRomaji = supplied;
   }
+  await processDirectRomajiSpacing(lyrics);
 }
 
 function isUpdateNotice(data: any): boolean {

@@ -15,6 +15,23 @@ const japaneseEngine = createJapaneseEngine(async (text) => {
   return KuromojiAnalyzer.parse(text);
 });
 
+export async function processDirectRomajiSpacing(lyrics: any) {
+  const direct = lyrics.SakuraDirectRomaji;
+  if (direct?.Type !== "Line") return;
+  const originals = (lyrics.Content ?? []).filter((group: any) => group.Type === "Vocal")
+    .map((group: any) => ({
+      time: lyrics.Type === "Syllable" ? group.Lead.StartTime : group.StartTime,
+      text: lyrics.Type === "Syllable" ? group.Lead.Syllables.map((s: any) => s.Text).join("") : group.Text,
+    })).filter((line: any) => Number.isFinite(line.time) && line.text?.trim());
+  if (originals.length !== direct.Content?.length) return;
+  for (let i = 0; i < originals.length; i++) {
+    const line = direct.Content[i];
+    if (Math.abs(line.StartTime - originals[i].time) > 1.5) continue;
+    const [reading] = await japaneseEngine([originals[i].text], [line.Text]);
+    line.TransliteratedText = reading;
+  }
+}
+
 const romanizationLogger = new Logger("Lyrics Romanization");
 
 const KoreanTextTest =
@@ -339,6 +356,7 @@ export const ProcessLyrics = async (lyrics: any, freshSource = false) => {
           originals,
           supplied,
         );
+        const preserveSuppliedGrouping = useSupplied && readings.every((value, index) => value === supplied[index]);
         let nextReading: string | undefined;
         for (let i = syllables.length - 1; i >= 0; i--) {
           syllables[i].TransliteratedText = readings[i];
@@ -346,7 +364,9 @@ export const ProcessLyrics = async (lyrics: any, freshSource = false) => {
           // provider's grouping. Keep the original-language flags untouched.
           syllables[i].RomanizedIsPartOfWord = nextReading !== undefined &&
             !/\s$/u.test(readings[i]) && !/^\s/u.test(nextReading);
-          if (useSupplied) delete syllables[i].RomanizedIsPartOfWord;
+          if (preserveSuppliedGrouping) {
+            delete syllables[i].RomanizedIsPartOfWord;
+          }
           if (readings[i].length > 0) nextReading = readings[i];
           contextualTargets.add(syllables[i]);
         }

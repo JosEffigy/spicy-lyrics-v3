@@ -15,6 +15,14 @@
 			"providers": [],
 			"checksum": "sha256:78603b9c1cdfdc6ed0a7a0eb680ddb88a852da2d4cc43f186e4ede684d199628",
 			"updatedAt": "2026-09-10"
+		},
+		"7.2.2": {
+			"artifacts": [
+				"https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.2.2/sakura-lyrics@7.2.2.zip"
+			],
+			"providers": [],
+			"checksum": "sha256:6ec12edc676c7cf423640beba2ac3beac6142ec6748799d6001348426177835e",
+			"updatedAt": "2026-09-10"
 		}
 	},
 	"metadata": {
