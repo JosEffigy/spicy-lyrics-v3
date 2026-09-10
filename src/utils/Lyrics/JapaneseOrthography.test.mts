@@ -59,6 +59,12 @@ test("real dictionary handles okurigana, particles, contractions, and normalized
     ["一ヶ月", "ichikagetsu"], ["時々", "tokidoki"], ["きゅう", "kyuu"],
     ["きゃっと", "kyatto"], ["ｷｭｳ", "kyuu"], ["パーティー", "pātī"],
     ["ﾊﾟｰﾃｨｰ", "pātī"], ["か\u3099", "ga"], ["私を", "watashi o"],
+    ["してらんない", "shiterannai"], ["やってらんない", "yatterannai"],
+    ["してらんなかった", "shiterannakatta"], ["いいんじゃない", "iin janai"],
+    ["食べてない", "tabetenai"], ["読んでない", "yondenai"],
+    ["高くない", "takakunai"], ["楽しくなかった", "tanoshikunakatta"],
+    ["食べられない", "taberarenai"], ["お金がない", "okane ga nai"],
+    ["笑ってあげる", "waratte ageru"], ["読んでいる", "yonde iru"],
   ]) {
     const variants = [[source], Array.from(source)];
     for (let i = 1; i < source.length; i++) variants.push([source.slice(0, i), source.slice(i)]);
@@ -92,4 +98,15 @@ test("supplied contractions are joined without replacing pronunciation or timing
     ["読むんだ", "special nda", "special nda"], ["猫だ", "neko nda", "neko nda"],
   ]) assert.equal((await engine([source], [supplied])).join(""), expected);
   assert.deepEqual(await engine(["読む", "ん", "だ"], ["yomu", " n", " da"]), ["yomu", "n", "da"]);
+  assert.deepEqual(await engine(["笑って", "あげ", "る"], ["waratte ", "age", " ru"]), ["waratte", " age", "ru"]);
+  assert.equal((await engine(["してらんない"], ["shite ran nai"])).join(""), "shiterannai");
+});
+
+test("known isolated kanji readings use phrase context without rewriting compounds or direct lyrics", async () => {
+  const tokenizer = await dictionary;
+  const engine = createJapaneseEngine(async text => tokenizer.tokenize(text));
+  assert.equal((await engine(["風"], ["fu"])).join(""), "kaze");
+  assert.equal((await engine(["風", "が", "吹く"], ["fu", " ga", " fuku"])).join(""), "kaze ga fuku");
+  assert.equal((await engine(["台風"], ["taifuu"])).join(""), "taifuu");
+  assert.equal((await engine(["風"], ["fu"], true)).join(""), "fu");
 });

@@ -14,7 +14,7 @@ test("raw source survives generated display changes and cache serialization", ()
   assert.equal(sourceRomaji({Text: "明日", TransliteratedText: "ashita"}), undefined);
 });
 
-test("complete source skips dictionary and preserves segment whitespace", async () => {
+test("complete source survives dictionary failure and preserves pronunciation", async () => {
   const engine = createJapaneseEngine(async () => { throw Error("must not run"); });
   assert.deepEqual(await engine(["明", "日"], ["a", "su"]), ["a", "su"]);
   assert.equal(completeSourceRomaji(["私", "は"], ["watashi", " wa"]), true);

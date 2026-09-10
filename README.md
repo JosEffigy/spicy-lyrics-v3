@@ -11,8 +11,8 @@ This fork is **vibe-coded**: changes are developed with substantial AI assistanc
 Requires Spicetify v3. Store admission is pending review; the release can be installed directly:
 
 ```powershell
-spicetify pkg install sakura-lyrics@7.2.2 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.2.2/sakura-lyrics@7.2.2.zip"
-spicetify pkg enable sakura-lyrics@7.2.2
+spicetify pkg install sakura-lyrics@7.2.3 "https://github.com/JosEffigy/spicy-lyrics-v3/releases/download/v7.2.3/sakura-lyrics@7.2.3.zip"
+spicetify pkg enable sakura-lyrics@7.2.3
 spicetify apply
 ```
 
@@ -49,7 +49,7 @@ pnpm run pack
 pnpm run verify
 ```
 
-Output: `dist/sakura-lyrics@7.2.2/` and `sakura-lyrics@7.2.2.zip`.
+Output: `dist/sakura-lyrics@7.2.3/` and `sakura-lyrics@7.2.3.zip`.
 
 ## Credits and license
 

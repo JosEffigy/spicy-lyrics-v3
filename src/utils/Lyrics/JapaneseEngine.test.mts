@@ -20,8 +20,7 @@ test("failure preserves supplied readings and original unknown kanji, then retri
     return [{surface_form: "今日", reading: "キョウ"}];
   });
   assert.deepEqual(await engine(["今日"], ["kyou"]), ["kyou"]);
-  assert.equal(calls, 0);
-  assert.deepEqual(await engine(["今日"]), ["今日"]);
+  assert.equal(calls, 1);
   assert.deepEqual(await engine(["今日"]), ["kyou"]);
   assert.equal(calls, 2);
   const offline = createJapaneseEngine(async () => { throw Error("offline"); });

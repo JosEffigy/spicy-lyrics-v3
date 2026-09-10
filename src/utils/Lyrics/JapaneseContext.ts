@@ -19,6 +19,7 @@ export interface ReadingToken {
   pronunciation?: string;
   pos?: string;
   pos_detail_1?: string;
+  basic_form?: string;
 }
 
 // Display words are not karaoke beats, nor always individual morphemes.
@@ -32,9 +33,12 @@ function needsSpace(previous: ReadingToken, current: ReadingToken, next?: Readin
   // Contracted explanatory の: 読む + ん + だ -> yomunda. An independent
   // noun or an unclassified ん must not be attached just because it sounds n.
   if (right === "ん" && current.pos === "名詞" && current.pos_detail_1 === "非自立" &&
-      next?.pos === "助動詞") return false;
+      (next?.pos === "助動詞" || next?.surface_form === "じゃ" || next?.surface_form === "で")) return false;
   if (current.pos === "助動詞" || current.pos_detail_1 === "接尾" ||
       previous.pos === "接頭詞") return false;
+  if (current.pos === "動詞" && current.pos_detail_1 === "非自立" &&
+      ["てる", "でる", "ちゃう", "じゃう", "とく", "どく"].includes(current.basic_form ?? "") &&
+      ["動詞", "助動詞"].includes(previous.pos ?? "")) return false;
   if (current.pos === "助詞" && current.pos_detail_1 === "接続助詞" &&
       ["動詞", "形容詞", "助動詞"].includes(previous.pos ?? "")) return false;
   return true;
@@ -43,40 +47,6 @@ function needsSpace(previous: ReadingToken, current: ReadingToken, next?: Readin
 export const hasJapanese = (text: string) =>
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text);
 
-// Supplied readings keep their pronunciation, but a demonstrably matching
-// explanatory contraction can still have accidental spaces removed. Track
-// removed characters in place so provider timing segments remain intact.
-export function joinSuppliedContractions(tokens: ReadingToken[], supplied: string[]): string[] {
-  const text = supplied.join("");
-  const remove = new Set<number>();
-  const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const reading = (token: ReadingToken) => token.pronunciation || token.reading || token.surface_form;
-  for (let i = 1; i + 1 < tokens.length; i++) {
-    if (tokens[i].surface_form !== "ん" || tokens[i].pos !== "名詞" ||
-        tokens[i].pos_detail_1 !== "非自立" || tokens[i + 1].pos !== "助動詞") continue;
-    let start = i - 1;
-    while (start > 0 && !needsSpace(tokens[start - 1], tokens[start], tokens[start + 1]) &&
-        hasJapanese(tokens[start - 1].surface_form)) start--;
-    let end = i + 2;
-    while (end < tokens.length && tokens[end].pos === "助動詞") end++;
-    const left = romanizeKana(tokens.slice(start, i).map(reading).join(""));
-    const right = romanizeKana(tokens.slice(i + 1, end).map(reading).join(""));
-    if (!/^[a-zāīūēō']+$/iu.test(left + right)) continue;
-    const pattern = new RegExp(`(?<![\\p{L}])(${escape(left)})(\\s+)n(\\s*)(${escape(right)})(?![\\p{L}])`, "giu");
-    for (const match of text.matchAll(pattern)) {
-      const first = match.index! + match[1].length;
-      for (let j = first; j < first + match[2].length; j++) remove.add(j);
-      const second = first + match[2].length + 1;
-      for (let j = second; j < second + match[3].length; j++) remove.add(j);
-    }
-  }
-  let offset = 0;
-  return supplied.map(value => {
-    let result = "";
-    for (let i = 0; i < value.length; i++, offset++) if (!remove.has(offset)) result += value[i];
-    return result;
-  });
-}
 
 // Keep a full token's reading intact across timing boundaries. The dictionary
 // knows word readings, not how a singer apportions them to karaoke segments.
@@ -120,6 +90,30 @@ export async function contextualReadings(
   };
   let cursor = 0;
   const tokens = await tokenize(text);
+  // IPADIC can parse the colloquial potential-negative contraction てらんない
+  // as a noun followed by an adjective. Repair only that grammatical context,
+  // retaining the literal reading and leaving independent nouns untouched.
+  const contractedBoundaries = new Set<number>();
+  for (let i = 2; i + 1 < tokens.length; i++) {
+    const connector = tokens[i - 1];
+    if (tokens[i].surface_form === "らん" &&
+        connector.pos === "助詞" && connector.pos_detail_1 === "接続助詞" &&
+        /^[てで]$/u.test(connector.surface_form) && tokens[i - 2].pos === "動詞" &&
+        /^な[いかくけ]/u.test(tokens[i + 1].surface_form) &&
+        ["形容詞", "助動詞"].includes(tokens[i + 1].pos ?? "")) {
+      contractedBoundaries.add(i);
+      contractedBoundaries.add(i + 1);
+    }
+  }
+  for (let i = 2; i < tokens.length; i++) {
+    // Negative omission of いる: 読んでない. Contrast お金がない,
+    // whose case particle does not form a verb connective.
+    if (tokens[i].basic_form === "ない" && ["形容詞", "助動詞"].includes(tokens[i].pos ?? "") &&
+        tokens[i - 1].pos === "助詞" && tokens[i - 1].pos_detail_1 === "接続助詞" &&
+        /^[てで]$/u.test(tokens[i - 1].surface_form) && tokens[i - 2].pos === "動詞") {
+      contractedBoundaries.add(i);
+    }
+  }
   let groupStart = 0;
   let groupEnd = 0;
   let groupReading = "";
@@ -160,7 +154,7 @@ export async function contextualReadings(
     const phoneticJoin = /[っッ]$/u.test(groupReading) && /^[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(reading) ||
       /[\p{Script=Hiragana}\p{Script=Katakana}ー]$/u.test(groupReading) &&
       /^[ゃゅょャュョぁぃぅぇぉァィゥェォっッゎヮーゝゞヽヾ\u3099\u309a]/u.test(token.surface_form);
-    const space = previousToken && start === cursor && !phoneticJoin && needsSpace(previousToken, token, tokens[index + 1]);
+    const space = previousToken && start === cursor && !phoneticJoin && !contractedBoundaries.has(index) && needsSpace(previousToken, token, tokens[index + 1]);
     if (start > cursor || space) {
       await flush();
       if (start > cursor) distribute(offsets[cursor], offsets[start], source.slice(offsets[cursor], offsets[start]));
