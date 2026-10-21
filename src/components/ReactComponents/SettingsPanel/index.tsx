@@ -21,7 +21,9 @@ const SECTIONS = [
   "Cache",
 ];
 
-export default function SettingsPanel({ onOpenExperiments }: { onOpenExperiments: () => void }) {
+export default function SettingsPanel({ onOpenExperiments, onOpenReadings }: {
+  onOpenExperiments: () => void; onOpenReadings: () => void;
+}) {
   const [query, setQuery] = useState("");
   const [sectionFilter, setSectionFilter] = useState("All");
 
@@ -34,6 +36,9 @@ export default function SettingsPanel({ onOpenExperiments }: { onOpenExperiments
 
       <BackgroundSection query={query} sectionFilter={sectionFilter} />
       <LyricsSection query={query} sectionFilter={sectionFilter} />
+      {(sectionFilter === "All" || sectionFilter === "Lyrics Display") &&
+        (!query || "japanese readings inspector".includes(query.toLowerCase())) &&
+        <button className="sl-sp-back-btn" onClick={onOpenReadings}>Inspect Japanese readings</button>}
       <PlaybackSection query={query} sectionFilter={sectionFilter} />
       <AppearanceSection query={query} sectionFilter={sectionFilter} />
       <InterfaceSection query={query} sectionFilter={sectionFilter} />

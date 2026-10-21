@@ -20,6 +20,9 @@ export interface ReadingToken {
   pos?: string;
   pos_detail_1?: string;
   basic_form?: string;
+  conjugated_form?: string;
+  word_type?: string;
+  reading_candidates?: string[];
 }
 
 // Display words are not karaoke beats, nor always individual morphemes.
@@ -36,6 +39,9 @@ function needsSpace(previous: ReadingToken, current: ReadingToken, next?: Readin
       (next?.pos === "助動詞" || next?.surface_form === "じゃ" || next?.surface_form === "で")) return false;
   if (current.pos === "助動詞" || current.pos_detail_1 === "接尾" ||
       previous.pos === "接頭詞") return false;
+  // A dependent verb after a continuative stem belongs to the compound.
+  if (current.pos === "動詞" && current.pos_detail_1 === "非自立" &&
+      previous.pos === "動詞" && previous.conjugated_form === "連用形") return false;
   if (current.pos === "動詞" && current.pos_detail_1 === "非自立" &&
       ["てる", "でる", "ちゃう", "じゃう", "とく", "どく"].includes(current.basic_form ?? "") &&
       ["動詞", "助動詞"].includes(previous.pos ?? "")) return false;
@@ -48,15 +54,22 @@ export const hasJapanese = (text: string) =>
   /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text);
 
 
-// Keep a full token's reading intact across timing boundaries. The dictionary
-// knows word readings, not how a singer apportions them to karaoke segments.
-// Internal timing is approximate when a word crosses those boundaries.
-export async function contextualReadings(
-  segments: string[],
-  tokenize: (text: string) => Promise<ReadingToken[]>,
-  romanize: (reading: string) => Promise<string>,
-): Promise<string[]> {
-  const source = segments.join("");
+export type ReadingPart = {
+  start: number; end: number; text: string; kana: string;
+  pos?: string; detail?: string; lemma?: string;
+  evidence: "literal-kana" | "dictionary" | "unresolved" | "literal";
+  alternatives: string[];
+};
+export type ReadingWord = {
+  start: number; end: number; text: string; kana: string;
+  spaceBefore: boolean; literal: boolean; parts: ReadingPart[];
+};
+export type JapaneseReadingPlan = {source: string; words: ReadingWord[]};
+
+// Analysis never receives timestamps or karaoke segmentation.
+export async function analyzeJapaneseText(
+  source: string, tokenize: (text: string) => Promise<ReadingToken[]>,
+): Promise<JapaneseReadingPlan> {
   // Normalize before dictionary analysis, retaining original timing offsets.
   // Graphemes keep decomposed dakuten and half-width voiced kana together.
   let text = "";
@@ -66,27 +79,14 @@ export async function contextualReadings(
     for (let i = 0; i < normalized.length; i++) offsets.push(index + segment.length);
     text += normalized;
   }
-  const output = segments.map(() => "");
-  const ends: number[] = [];
-  let total = 0;
-  for (const segment of segments) ends.push(total += segment.length);
-  let firstSegment = 0;
-  const distribute = (start: number, end: number, value: string) => {
-    const units = value.match(/(?:[bcdfghjklmpqrstvwxyz]*[aeiouāīūēō]|n'|n|[\s\S])/giu) ?? [];
-    let previous = 0;
-    while (firstSegment < ends.length && ends[firstSegment] <= start) firstSegment++;
-    let segmentStart = firstSegment === 0 ? 0 : ends[firstSegment - 1];
-    for (let i = firstSegment; i < ends.length && segmentStart < end; i++) {
-      const left = Math.max(start, segmentStart);
-      const right = Math.min(end, ends[i]);
-      if (right > left) {
-        const next = right === end ? units.length :
-          Math.round(units.length * (right - start) / (end - start));
-        output[i] += units.slice(previous, next).join("");
-        previous = next;
-      }
-      segmentStart = ends[i];
-    }
+  const words: ReadingWord[] = [];
+  let spaceBefore = false;
+  let parts: ReadingPart[] = [];
+  const literal = (start: number, end: number) => {
+    if (end <= start) return;
+    words.push({start, end, text: source.slice(start, end), kana: source.slice(start, end),
+      literal: true, spaceBefore, parts: []});
+    spaceBefore = false;
   };
   let cursor = 0;
   const tokens = await tokenize(text);
@@ -118,15 +118,15 @@ export async function contextualReadings(
   let groupEnd = 0;
   let groupReading = "";
   let previousToken: ReadingToken | undefined;
-  const flush = async () => {
-    if (groupEnd > groupStart) distribute(offsets[groupStart], offsets[groupEnd], await romanize(groupReading));
+  const flush = () => {
+    if (groupReading) words.push({start: offsets[groupStart], end: offsets[groupEnd],
+      text: source.slice(offsets[groupStart], offsets[groupEnd]), kana: groupReading,
+      spaceBefore, literal: false, parts});
     groupReading = "";
+    parts = [];
+    spaceBefore = false;
   };
-  const separate = (start: number) => {
-    let target = firstSegment;
-    while (target < ends.length && ends[target] <= offsets[start]) target++;
-    if (target < ends.length) output[target] += " ";
-  };
+  const separate = (_start: number) => { spaceBefore = true; };
   const readingOf = (token: ReadingToken) => {
     // Literal kana preserves small letters even if an unknown-word dictionary
     // entry expands them. Particles need contextual ワ/エ/オ pronunciations.
@@ -141,11 +141,12 @@ export async function contextualReadings(
     if (!token.surface_form) continue;
     const start = text.indexOf(token.surface_form, cursor);
     if (start < cursor) throw new Error("Japanese tokenizer lost source alignment");
+    if (hasJapanese(text.slice(cursor, start))) throw new Error("Japanese tokenizer omitted source text");
     const end = start + token.surface_form.length;
     if (!hasJapanese(token.surface_form) && !/^[ー\u3099\u309a]+$/u.test(token.surface_form)) {
-      await flush();
+      flush();
       if (previousToken && start === cursor && needsSpace(previousToken, token)) separate(start);
-      distribute(offsets[cursor], offsets[end], source.slice(offsets[cursor], offsets[end]));
+      literal(offsets[cursor], offsets[end]);
       cursor = end;
       previousToken = token;
       continue;
@@ -156,8 +157,8 @@ export async function contextualReadings(
       /^[ゃゅょャュョぁぃぅぇぉァィゥェォっッゎヮーゝゞヽヾ\u3099\u309a]/u.test(token.surface_form);
     const space = previousToken && start === cursor && !phoneticJoin && !contractedBoundaries.has(index) && needsSpace(previousToken, token, tokens[index + 1]);
     if (start > cursor || space) {
-      await flush();
-      if (start > cursor) distribute(offsets[cursor], offsets[start], source.slice(offsets[cursor], offsets[start]));
+      flush();
+      if (start > cursor) literal(offsets[cursor], offsets[start]);
     }
     if (space) {
       // Attach the separator to the source boundary, not a proportional slice
@@ -167,10 +168,56 @@ export async function contextualReadings(
     if (!groupReading) groupStart = start;
     groupEnd = end;
     groupReading += reading;
+    const evidence: ReadingPart["evidence"] = /\p{Script=Han}/u.test(reading) ? "unresolved" :
+      !hasJapanese(token.surface_form) ? "literal" :
+      !/\p{Script=Han}/u.test(token.surface_form) && token.pos !== "助詞" ? "literal-kana" : "dictionary";
+    parts.push({start: offsets[start], end: offsets[end], text: source.slice(offsets[start], offsets[end]),
+      kana: reading, pos: token.pos, detail: token.pos_detail_1, lemma: token.basic_form, evidence,
+      alternatives: evidence === "dictionary" ? [...new Set([reading, ...(token.reading_candidates ?? [])])] : [reading]});
     cursor = end;
     previousToken = token;
   }
-  await flush();
-  if (cursor < text.length) distribute(offsets[cursor], source.length, source.slice(offsets[cursor]));
+  flush();
+  if (hasJapanese(text.slice(cursor))) throw new Error("Japanese tokenizer omitted source text");
+  if (cursor < text.length) literal(offsets[cursor], source.length);
+  return {source, words};
+}
+
+// Projection is approximate within a word; pronunciation never depends on it.
+export async function projectJapanesePlan(
+  plan: JapaneseReadingPlan, segments: string[], romanize: (reading: string) => string | Promise<string>,
+): Promise<string[]> {
+  if (segments.join("") !== plan.source) throw new Error("Reading plan does not match source");
+  const output = segments.map(() => "");
+  const ends: number[] = [];
+  let total = 0;
+  for (const segment of segments) ends.push(total += segment.length);
+  let first = 0;
+  for (const word of plan.words) {
+    while (first < ends.length && ends[first] <= word.start) first++;
+    if (word.spaceBefore && first < output.length) output[first] += " ";
+    const converted = word.literal ? word.text : romanize(word.kana);
+    const value = typeof converted === "string" ? converted : await converted;
+    const units = value.match(/(?:[bcdfghjklmpqrstvwxyz]*[aeiouāīūēō]|n'|n|[\s\S])/giu) ?? [];
+    let previous = 0;
+    let segmentStart = first ? ends[first - 1] : 0;
+    for (let i = first; i < ends.length && segmentStart < word.end; i++) {
+      const right = Math.min(word.end, ends[i]);
+      if (right > Math.max(word.start, segmentStart)) {
+        const next = right === word.end ? units.length :
+          Math.round(units.length * (right - word.start) / (word.end - word.start));
+        output[i] += units.slice(previous, next).join("");
+        previous = next;
+      }
+      segmentStart = ends[i];
+    }
+  }
   return output;
+}
+
+export async function contextualReadings(
+  segments: string[], tokenize: (text: string) => Promise<ReadingToken[]>,
+  romanize: (reading: string) => Promise<string>,
+): Promise<string[]> {
+  return projectJapanesePlan(await analyzeJapaneseText(segments.join(""), tokenize), segments, romanize);
 }

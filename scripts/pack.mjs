@@ -5,7 +5,7 @@ import JSZip from "jszip";
 
 const version = "7.2.3";
 const source = path.resolve(`dist/sakura-lyrics@${version}`);
-const output = path.resolve(`sakura-lyrics@${version}.zip`);
+const output = path.resolve(process.argv[2] ?? `sakura-lyrics@${version}.zip`);
 const zip = new JSZip();
 
 async function addDirectory(directory, prefix = "") {
@@ -13,6 +13,7 @@ async function addDirectory(directory, prefix = "") {
   entries.sort((a, b) => a.name.localeCompare(b.name));
 
   for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith(".map")) continue;
     const absolute = path.join(directory, entry.name);
     const relative = path.posix.join(prefix, entry.name);
     if (entry.isDirectory()) {

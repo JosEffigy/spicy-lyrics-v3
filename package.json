@@ -8,7 +8,8 @@
   },
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "build": "spicetify-kit build .",
+    "build": "spicetify-kit build . && node scripts/minify.mjs",
+    "benchmark:japanese": "node scripts/benchmark-japanese.mts",
     "check": "tsc && spicetify-kit check .",
     "dev": "spicetify-kit dev .",
     "pack": "node scripts/pack.mjs",
@@ -38,6 +39,7 @@
     "@types/node": "^26.1.1",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
+    "esbuild": "^0.28.2",
     "jszip": "^3.10.1",
     "kuromoji": "0.1.2",
     "typescript": "^7.0.2"

@@ -22,9 +22,15 @@ Internal settings keys are retained; the repository URL stays the same.
 
 ## What changed
 
+### Japanese reading resolver (unreleased)
+
+The working tree analyzes a complete line into words, grammatical parts and kana readings before assigning anything to karaoke timestamps. It retains dictionary alternatives, accepts matching supplied readings, and records unresolved words instead of fabricating readings. Negative endings and compound verbs are grouped from the Japanese analysis.
+
+Settings → **Inspect Japanese readings** shows chosen kana, dictionary candidates, reading sources and fallback notes for each loaded line. This explains the analysis; it does not guarantee an ambiguous reading is correct. See [the resolver design](docs/japanese-reading-resolver.md).
+
 ### Direct romaji
 
-Complete romaji supplied with the lyrics is kept instead of overwritten by dictionary guesses. Source readings are stored separately from generated output; older generated-only cache entries are fetched again.
+Source readings are stored separately from generated output. The unreleased resolver checks automatic provider romaji against analyzed words and dictionary candidates. Matched direct-source lyrics retain their reading priority; unresolved words and names can also retain supplied readings with an explicit fallback note.
 
 When synced Japanese lyrics lack complete supplied romaji, the client can search [LRCLIB](https://lrclib.net) using the track title and artist. It checks duration, line timing and broad phonetic agreement before accepting a result. This is conservative matching, not a guarantee of correct sung readings. Conflicting or mismatched results are skipped.
 
@@ -50,6 +56,8 @@ pnpm run verify
 ```
 
 Output: `dist/sakura-lyrics@7.2.3/` and `sakura-lyrics@7.2.3.zip`.
+
+Production builds minify JavaScript and CSS while retaining license notices. Debug source maps stay in the local build directory and are excluded from release ZIPs. The development command remains unminified.
 
 ## Credits and license
 

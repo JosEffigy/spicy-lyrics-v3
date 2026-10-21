@@ -27,8 +27,9 @@ export async function processDirectRomajiSpacing(lyrics: any) {
   for (let i = 0; i < originals.length; i++) {
     const line = direct.Content[i];
     if (Math.abs(line.StartTime - originals[i].time) > 1.5) continue;
-    const [reading] = await japaneseEngine([originals[i].text], [line.Text], true);
-    line.TransliteratedText = reading;
+    const resolved = await japaneseEngine.resolve([originals[i].text], {supplied: [line.Text], source: "direct"});
+    line.TransliteratedText = resolved.segments[0];
+    line.SakuraJapaneseAnalysis = resolved;
   }
 }
 
@@ -280,7 +281,11 @@ const romanizeEntry = async (
   for (const script of presentScripts) {
     if (script === "Japanese") {
       if (ItemJapaneseTest.test(text.normalize("NFKC"))) {
-        text = (await japaneseEngine([text], [sourceRomaji(target)]))[0];
+        const resolved = await japaneseEngine.resolve([text], {
+          supplied: [sourceRomaji(target)], annotations: target.SakuraReadingAnnotations,
+        });
+        text = resolved.segments[0];
+        target.SakuraJapaneseAnalysis = resolved;
         changed = true;
       }
     } else if (script === "Chinese") {
@@ -351,10 +356,11 @@ export const ProcessLyrics = async (lyrics: any, freshSource = false) => {
         if (!syllables.some((s: any) => hasJapanese(s.Text.normalize("NFKC")))) continue;
         const originals = syllables.map((s: any) => s.Text);
         const supplied = syllables.map(sourceRomaji);
-        const readings = await japaneseEngine(
-          originals,
-          supplied,
-        );
+        const resolved = await japaneseEngine.resolve(originals, {
+          supplied, annotations: vocal.SakuraReadingAnnotations,
+        });
+        vocal.SakuraJapaneseAnalysis = resolved;
+        const readings = resolved.segments;
         let nextReading: string | undefined;
         for (let i = syllables.length - 1; i >= 0; i--) {
           syllables[i].TransliteratedText = readings[i];

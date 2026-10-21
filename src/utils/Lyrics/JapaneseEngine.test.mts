@@ -42,9 +42,9 @@ test("invalid alignment falls back without rejecting lyric processing", async ()
   assert.deepEqual(await engine(["今日"], ["kyou"]), ["kyou"]);
 });
 
-test("preserves supplied readings rather than guessing whether Latin text is correct", async () => {
+test("explicit kana wins over a conflicting automatic reading", async () => {
   const engine = createJapaneseEngine(async surface_form => [{surface_form}]);
-  assert.deepEqual(await engine(["みった"], ["mitsuta"]), ["mitsuta"]);
+  assert.deepEqual(await engine(["みった"], ["mitsuta"]), ["mitta"]);
   assert.deepEqual(await engine(["みった"]), ["mitta"]);
   assert.deepEqual(await engine(["Hello, world!"]), ["Hello, world!"]);
 });

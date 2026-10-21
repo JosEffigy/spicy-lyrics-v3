@@ -4,6 +4,7 @@ import { flushSync } from "react-dom";
 import { PopupModal } from "../components/Modal.ts";
 import SettingsPanel from "../components/ReactComponents/SettingsPanel/index.tsx";
 import ExperimentsPanel from "../components/ReactComponents/SettingsPanel/ExperimentsPanel.tsx";
+import JapaneseReadingsPanel from "../components/ReactComponents/SettingsPanel/JapaneseReadingsPanel.tsx";
 
 const MODAL_ID = "settingsPanel";
 
@@ -24,7 +25,7 @@ function renderPanel(element: React.ReactElement, direction?: Direction) {
 
 export function openSettingsPanel() {
   const { container, root } = renderPanel(
-    React.createElement(SettingsPanel, { onOpenExperiments: openExperimentsPanel })
+    React.createElement(SettingsPanel, { onOpenExperiments: openExperimentsPanel, onOpenReadings: openReadingsPanel })
   );
 
   PopupModal.display({
@@ -39,7 +40,7 @@ export function openSettingsPanel() {
 /** Back navigation from a sub-panel — swaps content without reopening the modal. */
 function backToSettings() {
   const { container, root } = renderPanel(
-    React.createElement(SettingsPanel, { onOpenExperiments: openExperimentsPanel }),
+    React.createElement(SettingsPanel, { onOpenExperiments: openExperimentsPanel, onOpenReadings: openReadingsPanel }),
     "back"
   );
 
@@ -63,6 +64,14 @@ function openExperimentsPanel() {
     title: "Experiments",
     content: container,
     modalId: MODAL_ID,
+    onClose: () => root.unmount(),
+  });
+}
+
+function openReadingsPanel() {
+  const {container, root} = renderPanel(React.createElement(JapaneseReadingsPanel, {onBack: backToSettings}), "forward");
+  PopupModal.transition({
+    title: "Japanese readings", content: container, modalId: MODAL_ID,
     onClose: () => root.unmount(),
   });
 }

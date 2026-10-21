@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-async-promise-executor no-explicit-any
 import { RetrievePackage } from "../ImportPackage.ts";
+import {tokenizeWithCandidates} from "./JapaneseDictionary.ts";
 
 let Analyzer: any;
 let initialization: Promise<void> | undefined;
@@ -59,7 +60,7 @@ export const parse = (text = ""): Promise<any> => {
     return Promise.resolve([]);
   }
 
-  const result = Analyzer.tokenize(text) as any[];
+  const result = tokenizeWithCandidates(Analyzer, text) as any[];
   for (const token of result) {
     token.verbose = {
       word_id: token.word_id,

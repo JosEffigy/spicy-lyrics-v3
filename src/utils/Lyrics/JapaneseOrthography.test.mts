@@ -95,7 +95,7 @@ test("supplied contractions are joined without replacing pronunciation or timing
   for (const [source, supplied, expected] of [
     ["読むんだ", "yomu nda", "yomunda"], ["行くんだ", "iku n da", "ikunda"],
     ["食べたんだ", "tabeta nda", "tabetanda"], ["読むんです", "yomu n desu", "yomundesu"],
-    ["読むんだ", "special nda", "special nda"], ["猫だ", "neko nda", "neko nda"],
+    ["読むんだ", "special nda", "yomunda"], ["猫だ", "neko nda", "nekoda"],
   ]) assert.equal((await engine([source], [supplied])).join(""), expected);
   assert.deepEqual(await engine(["読む", "ん", "だ"], ["yomu", " n", " da"]), ["yomu", "n", "da"]);
   assert.deepEqual(await engine(["笑って", "あげ", "る"], ["waratte ", "age", " ru"]), ["waratte", " age", "ru"]);

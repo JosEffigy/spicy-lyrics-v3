@@ -185,4 +185,5 @@ VOLUME_SLIDER_PLAN.md
 
 api-backend/
 
-docs/
+docs/*
+!docs/japanese-reading-resolver.md
